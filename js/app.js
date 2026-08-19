@@ -11,6 +11,7 @@
 // ============================================================
 
 import { entrarComGoogle, sair, observarAutenticacao, dadosDoLancador } from "./auth.js";
+import { iniciarFormLancamento } from "./form-lancamento.js";
 
 const telaLogin = document.getElementById("tela-login");
 const appShell = document.getElementById("app-shell");
@@ -19,8 +20,35 @@ const botaoSair = document.getElementById("botao-sair");
 const loginErro = document.getElementById("login-erro");
 const usuarioNomeEl = document.getElementById("usuario-nome");
 const usuarioFotoEl = document.getElementById("usuario-foto");
+const linksNav = document.querySelectorAll("#sidebar-nav a");
+
+let formLancamentoIniciado = false;
+let usuarioAtual = null;
+
+// --- Roteamento simples entre seções (sem framework, só troca de "hidden") ---
+function irParaSecao(nomeSecao, user) {
+  document.querySelectorAll(".secao-conteudo").forEach((secao) => {
+    secao.hidden = secao.id !== `secao-${nomeSecao}`;
+  });
+  linksNav.forEach((link) => {
+    link.classList.toggle("ativo", link.dataset.secao === nomeSecao);
+  });
+
+  if (nomeSecao === "lancamento" && !formLancamentoIniciado) {
+    formLancamentoIniciado = true;
+    iniciarFormLancamento(user);
+  }
+}
+
+linksNav.forEach((link) => {
+  link.addEventListener("click", (evento) => {
+    evento.preventDefault();
+    irParaSecao(link.dataset.secao, usuarioAtual);
+  });
+});
 
 function mostrarApp(user) {
+  usuarioAtual = user;
   telaLogin.style.display = "none";
   appShell.classList.add("ativo");
 
@@ -30,6 +58,8 @@ function mostrarApp(user) {
     usuarioFotoEl.src = lancador.usuario_foto;
     usuarioFotoEl.style.display = "block";
   }
+
+  irParaSecao("dashboard", user);
 }
 
 function mostrarLogin() {
