@@ -18,14 +18,14 @@ import { getAuth, GoogleAuthProvider } from "https://www.gstatic.com/firebasejs/
 import { getFirestore } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
 import { getStorage } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-storage.js";
 
-// >>> SUBSTITUA pelos valores do seu projeto Firebase <<<
 const firebaseConfig = {
-  apiKey: "SUA_API_KEY_AQUI",
-  authDomain: "SEU_PROJETO.firebaseapp.com",
-  projectId: "SEU_PROJETO",
-  storageBucket: "SEU_PROJETO.appspot.com",
-  messagingSenderId: "SEU_SENDER_ID",
-  appId: "SEU_APP_ID",
+  apiKey: "AIzaSyCpS-T6XkvilXKxehbpHOjU6Z2A-d3DAzI",
+  authDomain: "financeiro-707f0.firebaseapp.com",
+  projectId: "financeiro-707f0",
+  storageBucket: "financeiro-707f0.firebasestorage.app",
+  messagingSenderId: "577905703133",
+  appId: "1:577905703133:web:570912c5e1970f58fc8334",
+  measurementId: "G-3N2BKVLSNC"
 };
 
 export const app = initializeApp(firebaseConfig);
