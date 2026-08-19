@@ -66,13 +66,15 @@ vitale-conciliacao/
 ├── css/
 │   ├── tokens.css          → paleta, tipografia, tokens de design
 │   ├── layout.css          → tela de login + app shell
-│   └── formularios.css     → formulário de lançamento + chips de status
+│   ├── formularios.css     → formulário de lançamento + chips de status
+│   └── dashboard.css       → tabela matriz + heatmap
 ├── js/
 │   ├── firebase-config.js  → inicialização central do Firebase
 │   ├── auth.js              → login/logout Google, observador de sessão
 │   ├── firestore.js         → leitura de cadastros + gravação de lançamentos
 │   ├── conciliacao.js       → motor de regras (divergência, antecedência, pagamento)
 │   ├── form-lancamento.js   → tela de lançamento com preview em tempo real
+│   ├── dashboard.js          → tabela matriz + heatmap
 │   ├── seed-dados-exemplo.js → dados de teste (usar só em desenvolvimento)
 │   └── app.js                → liga autenticação, roteamento de abas e módulos
 └── icons/               → ícones do PWA (192x192 e 512x512 — adicionar depois)
@@ -85,10 +87,13 @@ vitale-conciliacao/
 - Preview em tempo real da conciliação (divergência, antecedência, data sugerida de pagamento) enquanto você preenche
 - Observação obrigatória quando há divergência orçamentária
 - Gravação do lançamento completo (com todos os campos calculados) no Firestore
+- **Painel com a tabela matriz** (Centro de Custo → Conta Contábil, Jan–Dez) e o **heatmap de Index%** com a mesma regra de cor combinada antes (verde ≤95%, amarelo 95,1–100%, vermelho >100%). Atualiza automaticamente depois de cada novo lançamento salvo.
+
+> Se você já tinha rodado o `seed.html` antes desta etapa, rode de novo — adicionei o Orçamento Aprovado de exemplo na Conta Contábil, que é o dado que faltava para o heatmap ter algo para comparar. Como o seed usa IDs fixos, rodar de novo só atualiza o mesmo documento, não duplica.
 
 ## Próximos módulos (ainda não construídos)
 
 - Upload de foto da NF (Storage) — adiado, veja a seção sobre o plano Blaze acima.
-- `js/dashboard.js` — tabela matriz Jan–Dez com o heatmap (verde/amarelo/vermelho), lendo os lançamentos gravados.
 - Tela de cadastro de Orçamento &amp; Contas dentro do próprio app (hoje só dá para cadastrar via `seed.html` ou diretamente no console do Firebase).
+- Filtros no painel (por período, Centro de Custo, usuário) — hoje mostra o ano acumulado inteiro.
 - Regras de segurança por papel (hoje qualquer usuário logado pode editar qualquer coisa — está OK para desenvolvimento, mas precisa refinar antes de usar com o condomínio de verdade).
