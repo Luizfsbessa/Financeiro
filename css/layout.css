@@ -1,0 +1,181 @@
+/* ============================================================
+   LAYOUT — App shell: tela de login e estrutura pós-login
+   ============================================================ */
+
+/* ---------- Tela de Login ---------- */
+#tela-login {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--brand-900);
+  padding: var(--space-4);
+}
+
+.login-card {
+  background: var(--paper-1);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-card);
+  padding: var(--space-8) var(--space-6);
+  max-width: 400px;
+  width: 100%;
+  text-align: center;
+}
+
+.login-marca {
+  font-family: var(--font-display);
+  font-size: var(--text-2xl);
+  color: var(--brand-900);
+  margin-bottom: var(--space-1);
+}
+
+.login-subtitulo {
+  color: var(--ink-400);
+  font-size: var(--text-sm);
+  margin-bottom: var(--space-6);
+}
+
+/* Barra de índice — motivo de assinatura repetido do heatmap do painel,
+   presente já na tela de login como identidade visual do app */
+.login-indice-barra {
+  display: flex;
+  height: 6px;
+  border-radius: 3px;
+  overflow: hidden;
+  margin: 0 0 var(--space-8);
+}
+.login-indice-barra span { flex: 1; }
+.login-indice-barra .ok { background: #4C8B63; }
+.login-indice-barra .alerta { background: #C99A3D; }
+.login-indice-barra .divergencia { background: #B14840; }
+
+.botao-google {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-3);
+  width: 100%;
+  padding: var(--space-3) var(--space-4);
+  background: var(--paper-1);
+  border: 1px solid var(--line-100);
+  border-radius: var(--radius-sm);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--ink-700);
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+.botao-google:hover { border-color: var(--brass-500); background: var(--brass-100); }
+.botao-google svg { flex-shrink: 0; }
+
+.login-erro {
+  margin-top: var(--space-4);
+  font-size: var(--text-xs);
+  color: var(--status-divergencia-fg);
+  min-height: 1em;
+}
+
+.login-rodape {
+  margin-top: var(--space-8);
+  font-size: var(--text-xs);
+  color: var(--ink-400);
+}
+
+/* ---------- App Shell (pós-login) ---------- */
+#app-shell {
+  display: none; /* ativado via JS após autenticação */
+  min-height: 100vh;
+  grid-template-columns: 240px 1fr;
+}
+#app-shell.ativo { display: grid; }
+
+.sidebar {
+  background: var(--brand-900);
+  color: var(--paper-0);
+  padding: var(--space-6) var(--space-4);
+  display: flex;
+  flex-direction: column;
+}
+
+.sidebar-marca {
+  font-family: var(--font-display);
+  font-size: var(--text-lg);
+  color: var(--paper-0);
+  margin-bottom: var(--space-8);
+}
+
+.sidebar-nav {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  flex: 1;
+}
+
+.sidebar-nav li {
+  margin-bottom: var(--space-1);
+}
+
+.sidebar-nav a {
+  display: block;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-sm);
+  color: rgba(246, 245, 241, 0.75);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  text-decoration: none;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+.sidebar-nav a:hover,
+.sidebar-nav a.ativo {
+  background: var(--brand-700);
+  color: var(--paper-0);
+}
+
+.sidebar-usuario {
+  border-top: 1px solid rgba(246, 245, 241, 0.15);
+  padding-top: var(--space-4);
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-xs);
+}
+
+.sidebar-usuario img {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+}
+
+.sidebar-usuario button {
+  margin-left: auto;
+  background: none;
+  border: none;
+  color: rgba(246, 245, 241, 0.6);
+  font-size: var(--text-xs);
+}
+.sidebar-usuario button:hover { color: var(--paper-0); }
+
+.conteudo-principal {
+  padding: var(--space-8);
+  overflow-y: auto;
+}
+
+.conteudo-principal header {
+  margin-bottom: var(--space-6);
+  padding-bottom: var(--space-4);
+  border-bottom: 1px solid var(--line-100);
+}
+
+.placeholder-modulo {
+  background: var(--paper-1);
+  border: 1px dashed var(--line-100);
+  border-radius: var(--radius-md);
+  padding: var(--space-12);
+  text-align: center;
+  color: var(--ink-400);
+}
+
+@media (max-width: 720px) {
+  #app-shell.ativo { grid-template-columns: 1fr; grid-template-rows: auto 1fr; }
+  .sidebar { flex-direction: row; align-items: center; padding: var(--space-3) var(--space-4); }
+  .sidebar-nav { display: none; } /* navegação mobile fica para uma iteração futura com menu hambúrguer */
+}

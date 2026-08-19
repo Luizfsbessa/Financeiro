@@ -1,0 +1,103 @@
+/* ============================================================
+   TOKENS DE DESIGN — Vitale Carioca | Conciliação Orçamentária
+   Paleta: "livro-razão" — slate/petróleo profundo + latão envelhecido
+   Números financeiros sempre em monoespaçada tabular (assinatura visual)
+   ============================================================ */
+
+:root {
+  /* --- Cor: base --- */
+  --ink-900: #10181C;      /* texto principal, quase preto azulado */
+  --ink-700: #2A3B41;      /* texto secundário */
+  --ink-400: #6B7D82;      /* texto terciário, legendas */
+  --paper-0: #F6F5F1;      /* fundo da página */
+  --paper-1: #FFFFFF;      /* fundo de cartões */
+  --line-100: #E3E1D9;     /* divisórias, bordas sutis */
+
+  /* --- Cor: marca --- */
+  --brand-900: #1B3A3F;    /* petróleo profundo — headers, sidebar */
+  --brand-700: #2F5C61;    /* petróleo médio — hover, ícones ativos */
+  --brass-500: #B08D3E;    /* latão — accent, links, destaque de assinatura */
+  --brass-100: #F1E6C8;    /* latão claro — fundo de destaque suave */
+
+  /* --- Cor: status (herda a lógica do heatmap do painel) --- */
+  --status-ok-bg: #E4EFE7;
+  --status-ok-fg: #2E6B44;
+  --status-alerta-bg: #FBF0DC;
+  --status-alerta-fg: #8A5B12;
+  --status-divergencia-bg: #F7E3E1;
+  --status-divergencia-fg: #A13B33;
+
+  /* --- Tipografia --- */
+  --font-display: "Fraunces", "Iowan Old Style", serif;
+  --font-ui: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-ledger: "IBM Plex Mono", "SFMono-Regular", Menlo, monospace;
+
+  --text-xs: 0.75rem;
+  --text-sm: 0.875rem;
+  --text-base: 1rem;
+  --text-lg: 1.25rem;
+  --text-xl: 1.75rem;
+  --text-2xl: 2.5rem;
+
+  /* --- Espaçamento --- */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-12: 48px;
+
+  /* --- Forma --- */
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --shadow-card: 0 1px 2px rgba(16, 24, 28, 0.06), 0 4px 12px rgba(16, 24, 28, 0.04);
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  background: var(--paper-0);
+  color: var(--ink-900);
+  font-family: var(--font-ui);
+  font-size: var(--text-base);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+h1, h2, h3 {
+  font-family: var(--font-display);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  margin: 0;
+  color: var(--brand-900);
+}
+
+/* Assinatura visual: toda cifra/valor monetário e numérico usa a ledger mono,
+   com tabular-nums para alinhar casas decimais como um livro-razão real. */
+.valor-monetario,
+.numero-tabular {
+  font-family: var(--font-ledger);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+}
+
+a { color: var(--brass-500); text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+button {
+  font-family: var(--font-ui);
+  cursor: pointer;
+}
+
+/* Foco visível — acessibilidade, nunca remover */
+:focus-visible {
+  outline: 2px solid var(--brass-500);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * { animation: none !important; transition: none !important; }
+}

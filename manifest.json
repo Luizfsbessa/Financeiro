@@ -1,0 +1,22 @@
+{
+  "name": "Vitale Carioca - Conciliação Orçamentária",
+  "short_name": "Vitale Conciliação",
+  "description": "Controle e conciliação orçamentária do Condomínio Vitale Carioca",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#F6F5F1",
+  "theme_color": "#1B3A3F",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "./icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "./icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
