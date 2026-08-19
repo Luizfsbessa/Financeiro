@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Seed de dados — uso único</title>
+  <link rel="stylesheet" href="./css/tokens.css" />
+  <style>
+    body { display: flex; align-items: center; justify-content: center; min-height: 100vh; }
+    .caixa { background: var(--paper-1); border: 1px solid var(--line-100); border-radius: var(--radius-md); padding: var(--space-8); max-width: 420px; text-align: center; }
+    button { padding: var(--space-3) var(--space-6); background: var(--brand-900); color: var(--paper-0); border: none; border-radius: var(--radius-sm); font-size: var(--text-sm); font-weight: 600; margin-top: var(--space-4); }
+    button:disabled { opacity: 0.6; }
+    #resultado { margin-top: var(--space-4); font-size: var(--text-sm); color: var(--ink-700); }
+  </style>
+</head>
+<body>
+  <div class="caixa">
+    <h1 style="font-size: var(--text-lg)">Popular dados de exemplo</h1>
+    <p style="color: var(--ink-400); font-size: var(--text-sm)">
+      Cria 1 Centro de Custo, 1 Conta Contábil e 2 Serviços de teste, só para você conseguir usar a tela de lançamento. Precisa estar logado — abra o app principal primeiro se ainda não logou.
+    </p>
+    <button id="botao-seed">Popular agora</button>
+    <p id="resultado"></p>
+  </div>
+
+  <script type="module">
+    import { observarAutenticacao } from "./js/auth.js";
+    import { popularDadosDeExemplo } from "./js/seed-dados-exemplo.js";
+
+    const botao = document.getElementById("botao-seed");
+    const resultado = document.getElementById("resultado");
+
+    let logado = false;
+    observarAutenticacao((user) => {
+      logado = !!user;
+      if (!logado) resultado.textContent = "Você precisa estar logado. Abra index.html, faça login, depois volte aqui.";
+    });
+
+    botao.addEventListener("click", async () => {
+      if (!logado) {
+        resultado.textContent = "Você precisa estar logado. Abra index.html, faça login, depois volte aqui.";
+        return;
+      }
+      botao.disabled = true;
+      resultado.textContent = "Criando...";
+      try {
+        const mensagem = await popularDadosDeExemplo();
+        resultado.textContent = mensagem;
+      } catch (erro) {
+        console.error(erro);
+        resultado.textContent = "Erro ao criar dados — veja o console (F12).";
+      } finally {
+        botao.disabled = false;
+      }
+    });
+  </script>
+</body>
+</html>

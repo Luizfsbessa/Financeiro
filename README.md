@@ -18,7 +18,26 @@ Ainda **não** inclui o motor de conciliação, o form de lançamento nem o dash
 
 > Opcional: se quiser restringir o login apenas a contas de um domínio específico (ex.: administradora do condomínio), descomente a linha `googleProvider.setCustomParameters(...)` em `firebase-config.js`.
 
-## 3. Testar localmente
+## 3. Aplicar as regras de segurança do Firestore
+
+Por padrão, o Firestore em modo produção **bloqueia toda leitura e escrita**. Para desenvolvimento:
+
+1. No console do Firebase → **Firestore Database → aba "Regras"**.
+2. Substitua o conteúdo pelo que está em `firestore.rules` deste projeto (permite qualquer usuário logado ler/escrever — será refinado por papéis antes de ir para produção real).
+3. Clique em **Publicar**.
+
+## 4. Popular dados de exemplo (para testar a tela de lançamento)
+
+A tela de lançamento depende de já existir pelo menos um Centro de Custo → Conta Contábil → Serviço cadastrado. Para não precisar fazer isso manualmente agora:
+
+1. Abra `index.html`, faça login com Google.
+2. Abra `seed.html` (mesma pasta) e clique em **"Popular agora"**.
+3. Isso cria: 1 Centro de Custo ("Manutenção Predial"), 1 Conta Contábil ("Elevadores") e 2 Serviços de exemplo, cada um com orçamento projetado de teste para os 12 meses.
+4. Volte para `index.html` → "Novo lançamento" e os menus já devem aparecer populados.
+
+> Esse arquivo (`seed.html` + `js/seed-dados-exemplo.js`) é só uma ferramenta de desenvolvimento — não precisa ir para o GitHub Pages final, mas também não tem problema se for, já que exige login para funcionar.
+
+## 5. Testar localmente
 
 Como o app usa módulos ES (`type="module"`), ele precisa ser servido por um servidor HTTP — não abra o `index.html` direto como arquivo local (`file://`), pois o navegador bloqueia os imports.
 
@@ -40,21 +59,36 @@ Igual ao fluxo que você já usa no projeto do rateio de água:
 ```
 vitale-conciliacao/
 ├── index.html
+├── seed.html              → ferramenta de dev: popula dados de exemplo
 ├── manifest.json
 ├── sw.js
+├── firestore.rules         → regras de segurança (colar no console)
 ├── css/
-│   ├── tokens.css      → paleta, tipografia, tokens de design
-│   └── layout.css      → tela de login + app shell
+│   ├── tokens.css          → paleta, tipografia, tokens de design
+│   ├── layout.css          → tela de login + app shell
+│   └── formularios.css     → formulário de lançamento + chips de status
 ├── js/
 │   ├── firebase-config.js  → inicialização central do Firebase
 │   ├── auth.js              → login/logout Google, observador de sessão
-│   └── app.js                → liga autenticação à interface
+│   ├── firestore.js         → leitura de cadastros + gravação de lançamentos
+│   ├── conciliacao.js       → motor de regras (divergência, antecedência, pagamento)
+│   ├── form-lancamento.js   → tela de lançamento com preview em tempo real
+│   ├── seed-dados-exemplo.js → dados de teste (usar só em desenvolvimento)
+│   └── app.js                → liga autenticação, roteamento de abas e módulos
 └── icons/               → ícones do PWA (192x192 e 512x512 — adicionar depois)
 ```
 
+## O que já funciona
+
+- Login com Google
+- Menus de Centro de Custo → Conta Contábil → Serviço em cascata, lidos do Firestore
+- Preview em tempo real da conciliação (divergência, antecedência, data sugerida de pagamento) enquanto você preenche
+- Observação obrigatória quando há divergência orçamentária
+- Gravação do lançamento completo (com todos os campos calculados) no Firestore
+
 ## Próximos módulos (ainda não construídos)
 
-- `js/conciliacao.js` — as fórmulas que já desenhamos (divergência orçamentária, antecedência de lançamento, matriz de política de pagamento com ajuste de dia útil), portadas para funções JS puras e testáveis.
-- `js/form-lancamento.js` — tela de lançamento de NF, substituindo o Google Forms.
-- `js/dashboard.js` — tabela matriz Jan–Dez com o heatmap (verde/amarelo/vermelho).
-- Regras de segurança do Firestore (`firestore.rules`) — quem pode lançar vs. quem pode editar orçamento aprovado.
+- Upload de foto da NF (Storage) — adiado, veja a seção sobre o plano Blaze acima.
+- `js/dashboard.js` — tabela matriz Jan–Dez com o heatmap (verde/amarelo/vermelho), lendo os lançamentos gravados.
+- Tela de cadastro de Orçamento &amp; Contas dentro do próprio app (hoje só dá para cadastrar via `seed.html` ou diretamente no console do Firebase).
+- Regras de segurança por papel (hoje qualquer usuário logado pode editar qualquer coisa — está OK para desenvolvimento, mas precisa refinar antes de usar com o condomínio de verdade).

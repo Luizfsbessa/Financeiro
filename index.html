@@ -14,6 +14,7 @@
 
   <link rel="stylesheet" href="./css/tokens.css" />
   <link rel="stylesheet" href="./css/layout.css" />
+  <link rel="stylesheet" href="./css/formularios.css" />
 </head>
 <body>
 
@@ -49,11 +50,11 @@
     <aside class="sidebar">
       <div class="sidebar-marca">Vitale Carioca</div>
 
-      <ul class="sidebar-nav">
-        <li><a href="#dashboard" class="ativo">Painel</a></li>
-        <li><a href="#lancamento">Novo lançamento</a></li>
-        <li><a href="#orcamento">Orçamento &amp; contas</a></li>
-        <li><a href="#relatorios">Relatórios</a></li>
+      <ul class="sidebar-nav" id="sidebar-nav">
+        <li><a href="#dashboard" data-secao="dashboard" class="ativo">Painel</a></li>
+        <li><a href="#lancamento" data-secao="lancamento">Novo lançamento</a></li>
+        <li><a href="#orcamento" data-secao="orcamento">Orçamento &amp; contas</a></li>
+        <li><a href="#relatorios" data-secao="relatorios">Relatórios</a></li>
       </ul>
 
       <div class="sidebar-usuario">
@@ -64,14 +65,86 @@
     </aside>
 
     <main class="conteudo-principal">
-      <header>
-        <h2>Painel de Conciliação</h2>
-      </header>
 
-      <div class="placeholder-modulo">
-        Estrutura base conectada com sucesso.<br />
-        Os módulos de lançamento, motor de conciliação e dashboard entram aqui nas próximas etapas.
-      </div>
+      <!-- ===== Aba: Painel (placeholder até construirmos o dashboard) ===== -->
+      <section id="secao-dashboard" class="secao-conteudo">
+        <header><h2>Painel de Conciliação</h2></header>
+        <div class="placeholder-modulo">
+          O dashboard com a tabela matriz e o heatmap entra aqui na próxima etapa.
+        </div>
+      </section>
+
+      <!-- ===== Aba: Novo Lançamento ===== -->
+      <section id="secao-lancamento" class="secao-conteudo" hidden>
+        <header><h2>Novo Lançamento</h2></header>
+
+        <div class="grid-lancamento">
+          <form id="form-lancamento" class="cartao-form">
+            <div class="campo">
+              <label for="campo-centro-custo">Centro de Custo</label>
+              <select id="campo-centro-custo" required>
+                <option value="">Carregando...</option>
+              </select>
+            </div>
+
+            <div class="campo">
+              <label for="campo-conta-contabil">Conta Contábil</label>
+              <select id="campo-conta-contabil" required disabled>
+                <option value="">Selecione a Conta Contábil</option>
+              </select>
+            </div>
+
+            <div class="campo">
+              <label for="campo-servico">Serviço / Prestador</label>
+              <select id="campo-servico" required disabled>
+                <option value="">Selecione o Serviço/Prestador</option>
+              </select>
+            </div>
+
+            <div class="campo">
+              <label for="campo-valor-nf">Valor da NF (R$)</label>
+              <input type="number" id="campo-valor-nf" min="0.01" step="0.01" required />
+            </div>
+
+            <div class="campo-duplo">
+              <div class="campo">
+                <label for="campo-data-emissao">Data de Emissão</label>
+                <input type="date" id="campo-data-emissao" required />
+              </div>
+              <div class="campo">
+                <label for="campo-data-vencimento">Data de Vencimento</label>
+                <input type="date" id="campo-data-vencimento" required />
+              </div>
+            </div>
+
+            <div class="campo" id="grupo-observacao" style="display:none">
+              <label for="campo-observacao">Observação (obrigatória em caso de divergência)</label>
+              <textarea id="campo-observacao" rows="3"></textarea>
+            </div>
+
+            <button type="submit" class="botao-primario">Salvar lançamento</button>
+            <p id="form-lancamento-status" class="form-status" role="status"></p>
+          </form>
+
+          <aside class="cartao-preview">
+            <h3>Conciliação em tempo real</h3>
+            <div id="preview-conciliacao">
+              <p class="preview-vazio">Preencha os campos ao lado para ver a conciliação em tempo real.</p>
+            </div>
+          </aside>
+        </div>
+      </section>
+
+      <section id="secao-orcamento" class="secao-conteudo" hidden>
+        <header><h2>Orçamento &amp; Contas</h2></header>
+        <div class="placeholder-modulo">Cadastro de Centros de Custo, Contas Contábeis e Orçamento entra aqui numa próxima etapa.</div>
+      </section>
+
+      <section id="secao-relatorios" class="secao-conteudo" hidden>
+        <header><h2>Relatórios</h2></header>
+        <div class="placeholder-modulo">Exportação de relatórios entra aqui numa próxima etapa.</div>
+      </section>
+
     </main>
   </div>
 
