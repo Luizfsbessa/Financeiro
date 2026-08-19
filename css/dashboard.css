@@ -1,0 +1,85 @@
+/* ============================================================
+   DASHBOARD — Tabela matriz Centro de Custo / Conta Contábil
+   e heatmap de Index% (mesma lógica de cor do Looker Studio)
+   ============================================================ */
+
+.tabela-scroll {
+  overflow-x: auto;
+  background: var(--paper-1);
+  border: 1px solid var(--line-100);
+  border-radius: var(--radius-md);
+}
+
+.tabela-matriz {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: var(--text-sm);
+  white-space: nowrap;
+}
+
+.tabela-matriz th,
+.tabela-matriz td {
+  padding: var(--space-2) var(--space-3);
+  text-align: right;
+  border-bottom: 1px solid var(--line-100);
+}
+
+.tabela-matriz th {
+  font-size: var(--text-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--ink-400);
+  font-weight: 600;
+  background: var(--paper-0);
+  position: sticky;
+  top: 0;
+}
+
+.tabela-matriz .col-conta,
+.tabela-matriz th.col-conta {
+  text-align: left;
+  position: sticky;
+  left: 0;
+  background: var(--paper-1);
+  min-width: 200px;
+}
+
+.tabela-matriz th.col-conta { background: var(--paper-0); }
+
+.tabela-matriz .col-mes { min-width: 84px; }
+
+.linha-centro td {
+  background: var(--brand-900);
+  color: var(--paper-0);
+  font-family: var(--font-display);
+  font-weight: 600;
+  text-align: left;
+  padding: var(--space-2) var(--space-3);
+}
+
+.tabela-matriz tbody tr:not(.linha-centro):hover td {
+  background: var(--paper-0);
+}
+
+.celula-heat {
+  font-weight: 700;
+  border-radius: var(--radius-sm);
+}
+.heat-verde { background: var(--status-ok-bg); color: var(--status-ok-fg); }
+.heat-amarelo { background: var(--status-alerta-bg); color: var(--status-alerta-fg); }
+.heat-vermelho { background: var(--status-divergencia-bg); color: var(--status-divergencia-fg); }
+.heat-sem-dados { color: var(--ink-400); font-weight: 400; }
+
+.legenda-heatmap {
+  display: flex;
+  gap: var(--space-3);
+  margin-top: var(--space-4);
+}
+
+.dashboard-conteudo code {
+  font-family: var(--font-ledger);
+  background: var(--paper-0);
+  padding: 1px 6px;
+  border-radius: var(--radius-sm);
+  font-size: var(--text-xs);
+}
