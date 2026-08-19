@@ -16,6 +16,10 @@ import { db } from "./firebase-config.js";
 // Valores de orçamento de exemplo — troque pelos reais quando cadastrar de verdade.
 const orcamentoExemplo = { jan: 1000, fev: 1000, mar: 1000, abr: 1000, mai: 1000, jun: 1000, jul: 1000, ago: 1000, set: 1000, out: 1000, nov: 1000, dez: 1000 };
 
+// Orçamento Aprovado de exemplo — no nível da Conta Contábil (regra de negócio:
+// o corte do Aprovado é na SOMATÓRIA da conta, não por serviço).
+const aprovadoExemplo = { jan: 1400, fev: 1400, mar: 1400, abr: 1400, mai: 1400, jun: 1400, jul: 1400, ago: 1400, set: 1400, out: 1400, nov: 1400, dez: 1400 };
+
 export async function popularDadosDeExemplo() {
   // Centro de Custo
   await setDoc(doc(db, "centros_custo", "cc-manutencao"), { nome: "Manutenção Predial" });
@@ -24,6 +28,7 @@ export async function popularDadosDeExemplo() {
   await setDoc(doc(db, "contas_contabeis", "ct-elevadores"), {
     nome: "Elevadores",
     centro_custo_id: "cc-manutencao",
+    orcamento_aprovado: aprovadoExemplo,
   });
 
   // Serviços (vinculados à conta acima)

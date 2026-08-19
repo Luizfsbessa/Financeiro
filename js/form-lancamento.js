@@ -14,6 +14,7 @@ import {
 } from "./firestore.js";
 import { processarLancamento } from "./conciliacao.js";
 import { dadosDoLancador } from "./auth.js";
+import { invalidarDashboard } from "./dashboard.js";
 
 const formatadorRS = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" });
 const formatadorData = new Intl.DateTimeFormat("pt-BR");
@@ -187,6 +188,7 @@ export async function iniciarFormLancamento(user) {
       limparSelect(selConta, "Selecione a Conta Contábil");
       limparSelect(selServico, "Selecione o Serviço/Prestador");
       atualizarPreview(null);
+      invalidarDashboard();
       mensagemStatus.textContent = "Lançamento salvo com sucesso.";
       mensagemStatus.classList.add("sucesso");
     } catch (erro) {

@@ -48,6 +48,18 @@ export function orcamentoProjetadoDoMes(servico, mesNumero) {
   return servico.orcamento_projetado[chave] ?? 0;
 }
 
+/** Lista TODAS as Contas Contábeis (todas os centros), usado para montar o dashboard inteiro. */
+export async function listarTodasContas() {
+  const snap = await getDocs(collection(db, "contas_contabeis"));
+  return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+}
+
+/** Lista todos os lançamentos de uma Conta Contábil (para agregação mensal no dashboard). */
+export async function listarLancamentosPorConta(contaContabilId) {
+  const q = query(collection(db, "lancamentos"), where("conta_contabil_id", "==", contaContabilId));
+  const snap = await getDocs(q);
+  return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+}
 /**
  * Grava um lançamento já processado (com os campos calculados do
  * conciliacao.js) na coleção `lancamentos`.

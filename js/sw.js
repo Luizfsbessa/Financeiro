@@ -6,7 +6,7 @@
 // persistência offline própria, cuidada pelo próprio SDK do Firebase.
 // ============================================================
 
-const CACHE_NOME = "vitale-conciliacao-shell-v1";
+const CACHE_NOME = "vitale-conciliacao-shell-v2";
 
 const ARQUIVOS_DO_SHELL = [
   "./",
@@ -14,9 +14,15 @@ const ARQUIVOS_DO_SHELL = [
   "./manifest.json",
   "./css/tokens.css",
   "./css/layout.css",
+  "./css/formularios.css",
+  "./css/dashboard.css",
   "./js/app.js",
   "./js/auth.js",
   "./js/firebase-config.js",
+  "./js/firestore.js",
+  "./js/conciliacao.js",
+  "./js/form-lancamento.js",
+  "./js/dashboard.js",
 ];
 
 self.addEventListener("install", (evento) => {
