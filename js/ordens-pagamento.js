@@ -23,10 +23,25 @@ let listenersConectados = false;
  * listeners só são conectados uma vez, mas a lista é sempre recarregada. */
 export async function iniciarOrdensPagamento() {
   if (!listenersConectados) {
-    listenersConectados = true;
-    await conectarFormulario();
+    try {
+      await conectarFormulario();
+      listenersConectados = true; // só marca como conectado se deu certo
+    } catch (erro) {
+      console.error("Erro ao conectar formulário de Ordem de Pagamento:", erro);
+      const selCentro = document.getElementById("op-centro-custo");
+      if (selCentro) selCentro.innerHTML = '<option value="">Erro ao carregar — veja o console (F12)</option>';
+    }
   }
-  await recarregarLista();
+
+  try {
+    await recarregarLista();
+  } catch (erro) {
+    console.error("Erro ao carregar lista de Ordens de Pagamento:", erro);
+    const container = document.getElementById("lista-ordens-pagamento");
+    if (container) {
+      container.innerHTML = `<div class="placeholder-modulo">Não foi possível carregar. Erro: ${erro.message || "veja o console (F12)"}.</div>`;
+    }
+  }
 }
 
 async function conectarFormulario() {

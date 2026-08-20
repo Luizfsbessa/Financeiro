@@ -37,8 +37,14 @@ function irParaSecao(nomeSecao, user) {
   });
 
   if (nomeSecao === "lancamento" && !formLancamentoIniciado) {
-    formLancamentoIniciado = true;
-    iniciarFormLancamento(user);
+    iniciarFormLancamento(user)
+      .then(() => {
+        formLancamentoIniciado = true;
+      })
+      .catch((erro) => {
+        console.error("Erro ao iniciar tela de lançamento:", erro);
+        // formLancamentoIniciado continua false — próxima visita à aba tenta de novo
+      });
   }
 
   if (nomeSecao === "dashboard" && !dashboardJaCarregado()) {

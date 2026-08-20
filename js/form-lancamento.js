@@ -44,8 +44,14 @@ export async function iniciarFormLancamento(user) {
   const mensagemStatus = document.getElementById("form-lancamento-status");
 
   // --- Popular Centros de Custo ---
-  const centros = await listarCentrosCusto();
-  preencherSelect(selCentro, centros, "Selecione o Centro de Custo");
+  try {
+    const centros = await listarCentrosCusto();
+    preencherSelect(selCentro, centros, "Selecione o Centro de Custo");
+  } catch (erro) {
+    console.error("Erro ao carregar Centros de Custo:", erro);
+    selCentro.innerHTML = '<option value="">Erro ao carregar — veja o console (F12)</option>';
+    throw erro; // propaga para o app.js não marcar a tela como "iniciada com sucesso"
+  }
 
   selCentro.addEventListener("change", async () => {
     servicoSelecionado = null;
