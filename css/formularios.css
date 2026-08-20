@@ -113,6 +113,17 @@
 .preview-linha:last-child { border-bottom: none; }
 .preview-linha span:first-child { color: var(--ink-400); }
 
+.preview-nota {
+  display: block;
+  padding-top: 0;
+  border-bottom: none;
+}
+.preview-nota span {
+  color: var(--brass-500);
+  font-size: var(--text-xs);
+  font-style: italic;
+}
+
 .chip {
   display: inline-block;
   padding: 2px var(--space-2);
