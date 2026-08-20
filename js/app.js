@@ -13,6 +13,7 @@
 import { entrarComGoogle, sair, observarAutenticacao, dadosDoLancador } from "./auth.js";
 import { iniciarFormLancamento } from "./form-lancamento.js";
 import { iniciarDashboard, invalidarDashboard, dashboardJaCarregado } from "./dashboard.js";
+import { iniciarOrdensPagamento } from "./ordens-pagamento.js";
 
 const telaLogin = document.getElementById("tela-login");
 const appShell = document.getElementById("app-shell");
@@ -42,6 +43,10 @@ function irParaSecao(nomeSecao, user) {
 
   if (nomeSecao === "dashboard" && !dashboardJaCarregado()) {
     iniciarDashboard();
+  }
+
+  if (nomeSecao === "ordens-pagamento") {
+    iniciarOrdensPagamento();
   }
 }
 

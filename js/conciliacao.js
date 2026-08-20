@@ -126,9 +126,10 @@ export function processarLancamento({ valorNF, orcamentoProjetado, dataEmissao, 
 
   const dataSugeridaPagamento = calcularDataSugeridaPagamento(new Date(dataEmissao), feriadosISO);
   const antecedenciaPolitica = calcularAntecedencia(entrada, dataSugeridaPagamento);
-  const dataLimiteLancamento = calcularDataLimiteLancamento(dataSugeridaPagamento);
 
-  const tempoHabilVencimento = dataVencimento ? calcularAntecedencia(entrada, new Date(dataVencimento)) : null;
+  const dataVenc = dataVencimento ? new Date(dataVencimento) : null;
+  const tempoHabilVencimento = dataVenc ? calcularAntecedencia(entrada, dataVenc) : null;
+  const dataLimiteLancamento = dataVenc ? calcularDataLimiteLancamento(dataVenc) : null;
 
   return {
     mes_referencia: mesReferencia(new Date(dataEmissao)),
@@ -139,9 +140,9 @@ export function processarLancamento({ valorNF, orcamentoProjetado, dataEmissao, 
     data_sugerida_pagamento: dataSugeridaPagamento,
     dias_antecedencia_politica: antecedenciaPolitica.diasAntecedencia,
     status_antecedencia_politica: antecedenciaPolitica.status,
-    data_limite_lancamento: dataLimiteLancamento,
 
     dias_tempo_habil_vencimento: tempoHabilVencimento?.diasAntecedencia ?? null,
     status_tempo_habil_vencimento: tempoHabilVencimento?.status ?? null,
+    data_limite_lancamento: dataLimiteLancamento,
   };
 }

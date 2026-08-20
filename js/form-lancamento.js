@@ -10,7 +10,8 @@ import {
   listarContasPorCentro,
   listarServicosPorConta,
   orcamentoProjetadoDoMes,
-  registrarLancamento,
+  listarOrdensPagamentoPorConta,
+  registrarLancamentoComOP,
 } from "./firestore.js";
 import { processarLancamento } from "./conciliacao.js";
 import { dadosDoLancador } from "./auth.js";
@@ -20,6 +21,7 @@ const formatadorRS = new Intl.NumberFormat("pt-BR", { style: "currency", currenc
 const formatadorData = new Intl.DateTimeFormat("pt-BR");
 
 let servicoSelecionado = null; // guarda o objeto completo (não só o id), para ler o orçamento
+let ordemPagamentoSelecionada = null; // idem, para validar o saldo disponível antes de enviar
 
 /**
  * Inicializa a tela de lançamento. Deve ser chamada uma vez, depois
@@ -32,6 +34,7 @@ export async function iniciarFormLancamento(user) {
   const selCentro = document.getElementById("campo-centro-custo");
   const selConta = document.getElementById("campo-conta-contabil");
   const selServico = document.getElementById("campo-servico");
+  const selOP = document.getElementById("campo-ordem-pagamento");
   const inputValor = document.getElementById("campo-valor-nf");
   const inputEmissao = document.getElementById("campo-data-emissao");
   const inputVencimento = document.getElementById("campo-data-vencimento");
@@ -46,8 +49,10 @@ export async function iniciarFormLancamento(user) {
 
   selCentro.addEventListener("change", async () => {
     servicoSelecionado = null;
+    ordemPagamentoSelecionada = null;
     limparSelect(selConta, "Selecione a Conta Contábil");
     limparSelect(selServico, "Selecione o Serviço/Prestador");
+    limparSelect(selOP, "Selecione a Conta Contábil primeiro");
     atualizarPreview(null);
     if (!selCentro.value) return;
     const contas = await listarContasPorCentro(selCentro.value);
@@ -56,11 +61,21 @@ export async function iniciarFormLancamento(user) {
 
   selConta.addEventListener("change", async () => {
     servicoSelecionado = null;
+    ordemPagamentoSelecionada = null;
     limparSelect(selServico, "Selecione o Serviço/Prestador");
+    limparSelect(selOP, "Selecione a Ordem de Pagamento");
     atualizarPreview(null);
     if (!selConta.value) return;
-    const servicos = await listarServicosPorConta(selConta.value);
+    const [servicos, ordensPagamento] = await Promise.all([
+      listarServicosPorConta(selConta.value),
+      listarOrdensPagamentoPorConta(selConta.value),
+    ]);
     preencherSelect(selServico, servicos, "Selecione o Serviço/Prestador");
+    preencherSelectOP(selOP, ordensPagamento);
+  });
+
+  selOP.addEventListener("change", () => {
+    ordemPagamentoSelecionada = obterDadosSelecionados(selOP);
   });
 
   selServico.addEventListener("change", () => {
@@ -117,24 +132,24 @@ export async function iniciarFormLancamento(user) {
         ${chip(resultado.status_divergencia)}
       </div>
 
-      <div class="preview-secao-titulo">Política de pagamento</div>
-      <div class="preview-linha">
-        <span>Antecedência até a política</span>
-        ${chip(resultado.status_antecedencia_politica, `${resultado.dias_antecedencia_politica} dia(s)`)}
-      </div>
-      <div class="preview-linha">
-        <span>Data limite para lançar (10 dias antes)</span>
-        <strong class="numero-tabular">${formatadorData.format(resultado.data_limite_lancamento)}</strong>
-      </div>
-      <div class="preview-linha">
-        <span>Data sugerida de pagamento (política)</span>
-        <strong class="numero-tabular">${formatadorData.format(resultado.data_sugerida_pagamento)}</strong>
-      </div>
-
-      <div class="preview-secao-titulo">Vencimento real (informado na NF)</div>
+      <div class="preview-secao-titulo">Vencimento da NF</div>
       <div class="preview-linha">
         <span>Tempo hábil até o vencimento</span>
         ${chip(resultado.status_tempo_habil_vencimento, `${resultado.dias_tempo_habil_vencimento} dia(s)`)}
+      </div>
+      <div class="preview-linha">
+        <span>Data limite para lançamento</span>
+        <strong class="numero-tabular">${formatadorData.format(resultado.data_limite_lancamento)}</strong>
+      </div>
+
+      <div class="preview-secao-titulo">Política de pagamento</div>
+      <div class="preview-linha">
+        <span>Data sugerida de pagamento</span>
+        <strong class="numero-tabular">${formatadorData.format(resultado.data_sugerida_pagamento)}</strong>
+      </div>
+      <div class="preview-linha">
+        <span>Antecedência conforme política</span>
+        ${chip(resultado.status_antecedencia_politica, `${resultado.dias_antecedencia_politica} dia(s)`)}
       </div>
     `;
   }
@@ -159,7 +174,19 @@ export async function iniciarFormLancamento(user) {
       return;
     }
 
+    if (!ordemPagamentoSelecionada) {
+      mensagemStatus.textContent = "Selecione a Ordem de Pagamento que vai custear este lançamento.";
+      return;
+    }
+
     const valorNF = parseFloat(inputValor.value);
+    const saldoDisponivelOP = ordemPagamentoSelecionada.saldo_disponivel ?? ordemPagamentoSelecionada.saldo_total ?? 0;
+
+    if (valorNF > saldoDisponivelOP) {
+      mensagemStatus.textContent = `Saldo insuficiente na Ordem de Pagamento selecionada (disponível: ${formatadorRS.format(saldoDisponivelOP)}).`;
+      return;
+    }
+
     const dataEmissao = new Date(inputEmissao.value + "T00:00:00");
     const dataVencimento = new Date(inputVencimento.value + "T00:00:00");
     const mes = dataEmissao.getMonth() + 1;
@@ -182,30 +209,35 @@ export async function iniciarFormLancamento(user) {
     botaoSalvar.disabled = true;
 
     try {
-      await registrarLancamento({
-        ...dadosDoLancador(user),
-        centro_custo_id: selCentro.value,
-        conta_contabil_id: selConta.value,
-        servico_id: selServico.value,
-        servico_nome: servicoSelecionado.nome,
-        valor_nf: valorNF,
-        data_emissao: dataEmissao,
-        data_vencimento: dataVencimento,
-        observacao: campoObservacao.value.trim(),
-        ...calculado,
-      });
+      await registrarLancamentoComOP(
+        {
+          ...dadosDoLancador(user),
+          centro_custo_id: selCentro.value,
+          conta_contabil_id: selConta.value,
+          servico_id: selServico.value,
+          servico_nome: servicoSelecionado.nome,
+          valor_nf: valorNF,
+          data_emissao: dataEmissao,
+          data_vencimento: dataVencimento,
+          observacao: campoObservacao.value.trim(),
+          ...calculado,
+        },
+        selOP.value
+      );
 
       form.reset();
       servicoSelecionado = null;
+      ordemPagamentoSelecionada = null;
       limparSelect(selConta, "Selecione a Conta Contábil");
       limparSelect(selServico, "Selecione o Serviço/Prestador");
+      limparSelect(selOP, "Selecione a Conta Contábil primeiro");
       atualizarPreview(null);
       invalidarDashboard();
       mensagemStatus.textContent = "Lançamento salvo com sucesso.";
       mensagemStatus.classList.add("sucesso");
     } catch (erro) {
       console.error("Erro ao salvar lançamento:", erro);
-      mensagemStatus.textContent = "Não foi possível salvar. Tente novamente.";
+      mensagemStatus.textContent = erro.message || "Não foi possível salvar. Tente novamente.";
       mensagemStatus.classList.remove("sucesso");
     } finally {
       botaoSalvar.disabled = false;
@@ -214,6 +246,20 @@ export async function iniciarFormLancamento(user) {
 }
 
 // --- Utilitários locais ---
+
+function preencherSelectOP(select, ordens) {
+  select.innerHTML = '<option value="">Selecione a Ordem de Pagamento</option>';
+  ordens.forEach((op) => {
+    const saldo = op.saldo_disponivel ?? op.saldo_total ?? 0;
+    const option = document.createElement("option");
+    option.value = op.id;
+    option.textContent = `OP ${op.numero_op || op.id} · Saldo: ${formatadorRS.format(saldo)}`;
+    option.dataset.item = JSON.stringify(op);
+    if (saldo <= 0) option.disabled = true;
+    select.appendChild(option);
+  });
+  select.disabled = ordens.length === 0;
+}
 
 function preencherSelect(select, itens, placeholder) {
   select.innerHTML = `<option value="">${placeholder}</option>`;

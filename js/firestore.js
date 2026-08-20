@@ -11,6 +11,8 @@ import {
   where,
   getDocs,
   addDoc,
+  doc,
+  runTransaction,
   serverTimestamp,
 } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
 import { db } from "./firebase-config.js";
@@ -63,6 +65,8 @@ export async function listarLancamentosPorConta(contaContabilId) {
 /**
  * Grava um lançamento já processado (com os campos calculados do
  * conciliacao.js) na coleção `lancamentos`.
+ * @deprecated desde a introdução de Ordens de Pagamento, use
+ * registrarLancamentoComOP — mantida apenas por compatibilidade.
  */
 export async function registrarLancamento(dados) {
   const ref = await addDoc(collection(db, "lancamentos"), {
@@ -70,4 +74,76 @@ export async function registrarLancamento(dados) {
     criado_em: serverTimestamp(),
   });
   return ref.id;
+}
+
+// ============================================================
+// Ordens de Pagamento
+//
+// O lançamento de uma NF só existe amarrado a uma Ordem de Pagamento (OP)
+// — a OP é solicitada em outro sistema e tem um saldo próprio, vinculado a
+// um Centro de Custo + Conta Contábil. Cada lançamento consome parte desse
+// saldo. Como duas pessoas podem lançar ao mesmo tempo contra a mesma OP,
+// a gravação do lançamento + o débito do saldo acontecem numa ÚNICA
+// transação atômica (registrarLancamentoComOP), evitando saldo negativo
+// por condição de corrida.
+// ============================================================
+
+/** Lista todas as Ordens de Pagamento cadastradas. */
+export async function listarOrdensPagamento() {
+  const snap = await getDocs(collection(db, "ordens_pagamento"));
+  return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+}
+
+/** Lista as Ordens de Pagamento vinculadas a uma Conta Contábil específica. */
+export async function listarOrdensPagamentoPorConta(contaContabilId) {
+  const q = query(collection(db, "ordens_pagamento"), where("conta_contabil_id", "==", contaContabilId));
+  const snap = await getDocs(q);
+  return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+}
+
+/** Cria uma nova Ordem de Pagamento — o saldo disponível nasce igual ao saldo total. */
+export async function criarOrdemPagamento(dados) {
+  const ref = await addDoc(collection(db, "ordens_pagamento"), {
+    ...dados,
+    saldo_disponivel: dados.saldo_total,
+    criado_em: serverTimestamp(),
+  });
+  return ref.id;
+}
+
+/**
+ * Grava um lançamento E debita o valor do saldo da Ordem de Pagamento
+ * escolhida, numa única transação. Se o saldo disponível no momento da
+ * transação for menor que o valor da NF, a operação inteira é abortada
+ * (nada é gravado) e um erro é lançado com a mensagem para o usuário.
+ */
+export async function registrarLancamentoComOP(dadosLancamento, ordemPagamentoId) {
+  const lancamentoRef = doc(collection(db, "lancamentos"));
+  const opRef = doc(db, "ordens_pagamento", ordemPagamentoId);
+
+  await runTransaction(db, async (transacao) => {
+    const opSnap = await transacao.get(opRef);
+    if (!opSnap.exists()) {
+      throw new Error("Ordem de Pagamento não encontrada — pode ter sido removida.");
+    }
+
+    const saldoAtual = opSnap.data().saldo_disponivel ?? 0;
+    const valor = dadosLancamento.valor_nf;
+
+    if (valor > saldoAtual) {
+      throw new Error(
+        `Saldo insuficiente nessa Ordem de Pagamento (disponível: ${saldoAtual.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}).`
+      );
+    }
+
+    transacao.set(lancamentoRef, {
+      ...dadosLancamento,
+      ordem_pagamento_id: ordemPagamentoId,
+      criado_em: serverTimestamp(),
+    });
+
+    transacao.update(opRef, { saldo_disponivel: saldoAtual - valor });
+  });
+
+  return lancamentoRef.id;
 }

@@ -6,7 +6,7 @@
 // persistência offline própria, cuidada pelo próprio SDK do Firebase.
 // ============================================================
 
-const CACHE_NOME = "bills-conciliacao-shell-v3";
+const CACHE_NOME = "bills-conciliacao-shell-v4";
 
 const ARQUIVOS_DO_SHELL = [
   "./",
@@ -23,6 +23,7 @@ const ARQUIVOS_DO_SHELL = [
   "./js/conciliacao.js",
   "./js/form-lancamento.js",
   "./js/dashboard.js",
+  "./js/ordens-pagamento.js",
 ];
 
 self.addEventListener("install", (evento) => {

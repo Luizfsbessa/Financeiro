@@ -10,7 +10,7 @@
 // mesmos documentos — não duplica nada.
 // ============================================================
 
-import { doc, setDoc } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
+import { doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
 import { db } from "./firebase-config.js";
 
 // Valores de orçamento de exemplo — troque pelos reais quando cadastrar de verdade.
@@ -44,5 +44,21 @@ export async function popularDadosDeExemplo() {
     orcamento_projetado: { ...orcamentoExemplo, jan: 500, fev: 500, mar: 500 },
   });
 
-  return "Dados de exemplo criados: 1 Centro de Custo, 1 Conta Contábil, 2 Serviços.";
+  // Ordem de Pagamento de exemplo — vinculada à Conta Contábil acima.
+  // Só cria se ainda não existir: rodar o seed de novo NÃO deve resetar o
+  // saldo_disponivel de uma OP que você já usou em testes de lançamento.
+  const opRef = doc(db, "ordens_pagamento", "op-exemplo-0001");
+  const opSnap = await getDoc(opRef);
+  if (!opSnap.exists()) {
+    await setDoc(opRef, {
+      numero_solicitacao: "SOL-0001",
+      numero_op: "OP-0001",
+      centro_custo_id: "cc-manutencao",
+      conta_contabil_id: "ct-elevadores",
+      saldo_total: 5000,
+      saldo_disponivel: 5000,
+    });
+  }
+
+  return "Dados de exemplo criados/atualizados: Centro de Custo, Conta Contábil, Serviços e Ordem de Pagamento (se ainda não existia).";
 }
