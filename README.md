@@ -99,6 +99,17 @@ vitale-conciliacao/
 
 > Se você já tinha rodado o `seed.html` antes desta etapa, rode de novo — agora ele também cria uma Ordem de Pagamento de exemplo (saldo R$ 5.000, vinculada à conta "Elevadores"), necessária para conseguir salvar um lançamento de teste. Rodar de novo é seguro: se a OP de exemplo já existir, o seed não mexe no saldo dela (não quer sobrescrever o consumo real de testes anteriores).
 
+## Importar orçamento real de uma planilha
+
+`seed.html` agora tem duas seções separadas:
+
+1. **"Importar orçamento (planilha real)"** — grava os Centros de Custo e Contas Contábeis extraídos de `seed_orcamento_aprovado.xlsx` (11 Centros, 80 combinações de Conta Contábil, cada uma com Orçamento Aprovado mês a mês). Os dados já vêm processados em `js/dados-orcamento-importado.js` — gerado automaticamente a partir da planilha, não é pra editar esse arquivo à mão. Seguro rodar de novo (usa IDs fixos baseados no nome do centro + código da conta).
+2. **"Popular dados de exemplo (teste)"** — continua existindo, separado, só para testar o fluxo sem mexer nos dados reais.
+
+**Importante — o que falta depois de importar:** a planilha só tinha Centro de Custo + Conta Contábil + Orçamento Aprovado. Não existe nenhum Serviço/Prestador (nível de Orçamento Projetado) vinculado a essas 80 contas ainda — sem isso, a tela "Novo Lançamento" não vai ter opções no campo Serviço para essas contas. Isso precisa ser cadastrado à parte: manualmente, ou me mande uma planilha com o nível de Serviço/Prestador + Orçamento Projetado que eu gero outro import igual a esse.
+
+Para gerar esse tipo de importação a partir de uma planilha nova no futuro, as colunas esperadas são: `competência` (nome do mês por extenso, em português), `Centro_Custo`, `Conta_contábil` (código), `Descrição_conta_contábil`, `orçamento_aprovado` (valor daquele mês).
+
 ## Próximos módulos (ainda não construídos)
 
 - Upload de foto da NF (Storage) — adiado, veja a seção sobre o plano Blaze acima.
