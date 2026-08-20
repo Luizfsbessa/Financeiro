@@ -1,7 +1,10 @@
-# Vitale Carioca — Conciliação Orçamentária (PWA)
+# Bills — Conciliação Orçamentária (PWA)
 
-Estrutura base do app: login com Google (Firebase Auth) + app shell.
-Ainda **não** inclui o motor de conciliação, o form de lançamento nem o dashboard — isso vem nas próximas etapas.
+Solução de controle e conciliação orçamentária: PWA com login Google, motor de regras de negócio (divergência orçamentária, antecedência de pagamento, política de pagamento) e painel com heatmap — sem depender de planilha nem de custo de hospedagem.
+
+> Nasceu como ferramenta interna do Condomínio Vitale Carioca, mas foi generalizada para funcionar com qualquer hierarquia de Centro de Custo → Conta Contábil → Serviço/Fornecedor — condomínio, pequena empresa, ONG, o que fizer sentido.
+
+Estrutura base do app: login com Google (Firebase Auth) + app shell + motor de conciliação + tela de lançamento + painel com heatmap.
 
 ## 1. Criar o projeto Firebase (gratuito)
 
@@ -97,3 +100,4 @@ vitale-conciliacao/
 - Tela de cadastro de Orçamento &amp; Contas dentro do próprio app (hoje só dá para cadastrar via `seed.html` ou diretamente no console do Firebase).
 - Filtros no painel (por período, Centro de Custo, usuário) — hoje mostra o ano acumulado inteiro.
 - Regras de segurança por papel (hoje qualquer usuário logado pode editar qualquer coisa — está OK para desenvolvimento, mas precisa refinar antes de usar com o condomínio de verdade).
+- **Multi-workspace (para virar produto de verdade):** hoje todos os dados vivem soltos nas coleções `centros_custo`, `contas_contabeis`, `servicos` e `lancamentos` — ou seja, é um projeto Firebase por cliente/uso. Para usar isso em vários contextos diferentes (não só o condomínio) dentro do mesmo projeto, o próximo passo estrutural é introduzir um conceito de "workspace" (ex.: `workspaces/{id}/centros_custo/...`), com cada usuário vinculado a um ou mais workspaces — isso já habilita usar o Bills tanto pro condomínio quanto para outra necessidade, sem misturar os dados. Vale planejar antes de crescer muito o cadastro atual, porque migrar depois dá mais trabalho do que decidir agora.

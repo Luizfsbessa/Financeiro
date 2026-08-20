@@ -1,7 +1,7 @@
 {
-  "name": "Vitale Carioca - Conciliação Orçamentária",
-  "short_name": "Vitale Conciliação",
-  "description": "Controle e conciliação orçamentária do Condomínio Vitale Carioca",
+  "name": "Bills - Conciliação Orçamentária",
+  "short_name": "Bills",
+  "description": "Controle e conciliação orçamentária, sem planilha e sem custo",
   "start_url": "./index.html",
   "display": "standalone",
   "background_color": "#F6F5F1",
