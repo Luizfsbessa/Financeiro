@@ -78,6 +78,7 @@ vitale-conciliacao/
 │   ├── conciliacao.js       → motor de regras (divergência, antecedência, pagamento)
 │   ├── form-lancamento.js   → tela de lançamento com preview em tempo real
 │   ├── dashboard.js          → tabela matriz + heatmap
+│   ├── ordens-pagamento.js   → cadastro de OPs e consumo de saldo por lançamento
 │   ├── seed-dados-exemplo.js → dados de teste (usar só em desenvolvimento)
 │   └── app.js                → liga autenticação, roteamento de abas e módulos
 └── icons/               → ícones do PWA (192x192 e 512x512 — adicionar depois)
@@ -91,8 +92,12 @@ vitale-conciliacao/
 - Observação obrigatória quando há divergência orçamentária
 - Gravação do lançamento completo (com todos os campos calculados) no Firestore
 - **Painel com a tabela matriz** (Centro de Custo → Conta Contábil, Jan–Dez) e o **heatmap de Index%** com a mesma regra de cor combinada antes (verde ≤95%, amarelo 95,1–100%, vermelho >100%). Atualiza automaticamente depois de cada novo lançamento salvo.
+- **Ordens de Pagamento (OP):** cada lançamento de NF agora é feito contra uma OP específica (vinculada a Centro de Custo + Conta Contábil), e o saldo é debitado automaticamente numa transação atômica — se duas pessoas lançarem ao mesmo tempo contra a mesma OP, o Firestore garante que o saldo nunca fica negativo por condição de corrida. A tela "Ordens de pagamento" permite cadastrar novas OPs (número da solicitação, número da OP, saldo total) e mostra a lista com saldo disponível e % consumido, com heatmap (verde/amarelo/vermelho conforme o consumo).
+- **Preview de conciliação reorganizado em duas seções independentes:**
+  - *Vencimento da NF:* Tempo hábil até o vencimento real + Data limite para lançamento — baseado só no que o fornecedor colocou na NF.
+  - *Política de pagamento:* Data sugerida de pagamento + Antecedência conforme política — baseado só na regra interna (dia 10/20/30). As duas são propositalmente independentes: o vencimento real pode não bater com o que a política sugeriria, e isso não é um erro.
 
-> Se você já tinha rodado o `seed.html` antes desta etapa, rode de novo — adicionei o Orçamento Aprovado de exemplo na Conta Contábil, que é o dado que faltava para o heatmap ter algo para comparar. Como o seed usa IDs fixos, rodar de novo só atualiza o mesmo documento, não duplica.
+> Se você já tinha rodado o `seed.html` antes desta etapa, rode de novo — agora ele também cria uma Ordem de Pagamento de exemplo (saldo R$ 5.000, vinculada à conta "Elevadores"), necessária para conseguir salvar um lançamento de teste. Rodar de novo é seguro: se a OP de exemplo já existir, o seed não mexe no saldo dela (não quer sobrescrever o consumo real de testes anteriores).
 
 ## Próximos módulos (ainda não construídos)
 

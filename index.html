@@ -54,6 +54,7 @@
       <ul class="sidebar-nav" id="sidebar-nav">
         <li><a href="#dashboard" data-secao="dashboard" class="ativo">Painel</a></li>
         <li><a href="#lancamento" data-secao="lancamento">Novo lançamento</a></li>
+        <li><a href="#ordens-pagamento" data-secao="ordens-pagamento">Ordens de pagamento</a></li>
         <li><a href="#orcamento" data-secao="orcamento">Orçamento &amp; contas</a></li>
         <li><a href="#relatorios" data-secao="relatorios">Relatórios</a></li>
       </ul>
@@ -103,6 +104,13 @@
             </div>
 
             <div class="campo">
+              <label for="campo-ordem-pagamento">Ordem de Pagamento</label>
+              <select id="campo-ordem-pagamento" required disabled>
+                <option value="">Selecione a Conta Contábil primeiro</option>
+              </select>
+            </div>
+
+            <div class="campo">
               <label for="campo-valor-nf">Valor da NF (R$)</label>
               <input type="number" id="campo-valor-nf" min="0.01" step="0.01" required />
             </div>
@@ -133,6 +141,50 @@
               <p class="preview-vazio">Preencha os campos ao lado para ver a conciliação em tempo real.</p>
             </div>
           </aside>
+        </div>
+      </section>
+
+      <!-- ===== Aba: Ordens de Pagamento ===== -->
+      <section id="secao-ordens-pagamento" class="secao-conteudo" hidden>
+        <header><h2>Ordens de Pagamento</h2></header>
+
+        <form id="form-ordem-pagamento" class="cartao-form" style="max-width: 560px; margin-bottom: var(--space-6)">
+          <div class="campo-duplo">
+            <div class="campo">
+              <label for="op-numero-solicitacao">Nº da Solicitação</label>
+              <input type="text" id="op-numero-solicitacao" required />
+            </div>
+            <div class="campo">
+              <label for="op-numero-op">Nº da Ordem de Pagamento</label>
+              <input type="text" id="op-numero-op" required />
+            </div>
+          </div>
+
+          <div class="campo">
+            <label for="op-centro-custo">Centro de Custo</label>
+            <select id="op-centro-custo" required>
+              <option value="">Carregando...</option>
+            </select>
+          </div>
+
+          <div class="campo">
+            <label for="op-conta-contabil">Conta Contábil</label>
+            <select id="op-conta-contabil" required disabled>
+              <option value="">Selecione a Conta Contábil</option>
+            </select>
+          </div>
+
+          <div class="campo">
+            <label for="op-saldo-total">Saldo Total (R$)</label>
+            <input type="number" id="op-saldo-total" min="0.01" step="0.01" required />
+          </div>
+
+          <button type="submit" class="botao-primario">Registrar Ordem de Pagamento</button>
+          <p id="form-op-status" class="form-status" role="status"></p>
+        </form>
+
+        <div id="lista-ordens-pagamento">
+          <p class="preview-vazio">Carregando...</p>
         </div>
       </section>
 
