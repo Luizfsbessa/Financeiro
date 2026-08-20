@@ -103,6 +103,9 @@ export async function iniciarFormLancamento(user) {
       return;
     }
 
+    const usouVencimentoComoReferencia =
+      resultado.data_referencia_pagamento.getTime() !== resultado.data_sugerida_pagamento.getTime();
+
     preview.innerHTML = `
       <div class="preview-linha">
         <span>Orçamento projetado do mês</span>
@@ -125,9 +128,13 @@ export async function iniciarFormLancamento(user) {
         <strong class="numero-tabular">${formatadorData.format(resultado.data_limite_lancamento)}</strong>
       </div>
       <div class="preview-linha">
-        <span>Data sugerida de pagamento</span>
+        <span>Data sugerida de pagamento (política)</span>
         <strong class="numero-tabular">${formatadorData.format(resultado.data_sugerida_pagamento)}</strong>
       </div>
+      ${usouVencimentoComoReferencia ? `
+      <div class="preview-linha preview-nota">
+        <span>Vencimento real deu mais prazo — usando ${formatadorData.format(resultado.data_referencia_pagamento)} como referência da antecedência.</span>
+      </div>` : ""}
     `;
   }
 
