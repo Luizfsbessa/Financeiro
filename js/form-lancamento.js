@@ -117,8 +117,12 @@ export async function iniciarFormLancamento(user) {
         ${chip(resultado.status_divergencia)}
       </div>
       <div class="preview-linha">
-        <span>Antecedência</span>
+        <span>Antecedência até o pagamento</span>
         ${chip(resultado.status_antecedencia, `${resultado.dias_antecedencia} dia(s)`)}
+      </div>
+      <div class="preview-linha">
+        <span>Data limite para lançar (10 dias antes)</span>
+        <strong class="numero-tabular">${formatadorData.format(resultado.data_limite_lancamento)}</strong>
       </div>
       <div class="preview-linha">
         <span>Data sugerida de pagamento</span>

@@ -26,14 +26,33 @@ export function calcularDivergencia(valorNF, orcamentoProjetado) {
 }
 
 /**
- * Regra 2.2 — Verificação de Antecedência de Lançamento (< 10 dias).
- * dataEntrada = momento do lançamento (equivalente ao carimbo de data/hora do Forms)
- * dataVencimento = vencimento da NF
+ * Data limite para o lançamento ser feito com a antecedência mínima exigida
+ * (Data Sugerida de Pagamento − 10 dias corridos). Puramente informativo —
+ * o status de alerta em si já vem de calcularAntecedencia.
  */
-export function calcularAntecedencia(dataEntrada, dataVencimento) {
+export function calcularDataLimiteLancamento(dataSugeridaPagamento) {
+  const limite = new Date(dataSugeridaPagamento);
+  limite.setDate(limite.getDate() - 10);
+  return limite;
+}
+
+/**
+ * Regra 2.2 — Verificação de Antecedência de Lançamento (< 10 dias).
+ *
+ * IMPORTANTE: a antecedência é medida contra a Data Sugerida de Pagamento
+ * (calculada pela política interna, regra 2.3) — NÃO contra a Data de
+ * Vencimento que vem escrita na própria NF. A Data de Vencimento do
+ * fornecedor não tem relação com quando o condomínio de fato paga; o que
+ * importa é ter pelo menos 10 dias de folga até a data em que o pagamento
+ * será efetivamente processado.
+ *
+ * dataEntrada = momento do lançamento (equivalente ao carimbo de data/hora do Forms)
+ * dataSugeridaPagamento = resultado da regra 2.3 (calcularDataSugeridaPagamento)
+ */
+export function calcularAntecedencia(dataEntrada, dataSugeridaPagamento) {
   const umDiaMs = 24 * 60 * 60 * 1000;
   const diasAntecedencia = Math.round(
-    (dataVencimento.setHours(0, 0, 0, 0) - new Date(dataEntrada).setHours(0, 0, 0, 0)) / umDiaMs
+    (new Date(dataSugeridaPagamento).setHours(0, 0, 0, 0) - new Date(dataEntrada).setHours(0, 0, 0, 0)) / umDiaMs
   );
   const status = diasAntecedencia < 10 ? "ALERTA_MENOS_10_DIAS" : "OK";
 
@@ -94,11 +113,16 @@ export function calcularDataSugeridaPagamento(dataEmissao, feriadosISO = []) {
 /**
  * Executa todas as regras de uma vez para um lançamento — usado tanto
  * na pré-visualização do formulário quanto na gravação final no Firestore.
+ *
+ * Nota de ordem: a Data Sugerida de Pagamento precisa ser calculada ANTES
+ * da antecedência, porque a antecedência agora é medida contra ela (não
+ * contra a Data de Vencimento da NF — ver comentário em calcularAntecedencia).
  */
 export function processarLancamento({ valorNF, orcamentoProjetado, dataEmissao, dataVencimento, dataEntrada, feriadosISO }) {
   const divergencia = calcularDivergencia(valorNF, orcamentoProjetado);
-  const antecedencia = calcularAntecedencia(dataEntrada ?? new Date(), new Date(dataVencimento));
   const dataSugeridaPagamento = calcularDataSugeridaPagamento(new Date(dataEmissao), feriadosISO);
+  const antecedencia = calcularAntecedencia(dataEntrada ?? new Date(), dataSugeridaPagamento);
+  const dataLimiteLancamento = calcularDataLimiteLancamento(dataSugeridaPagamento);
 
   return {
     mes_referencia: mesReferencia(new Date(dataEmissao)),
@@ -108,5 +132,6 @@ export function processarLancamento({ valorNF, orcamentoProjetado, dataEmissao, 
     dias_antecedencia: antecedencia.diasAntecedencia,
     status_antecedencia: antecedencia.status,
     data_sugerida_pagamento: dataSugeridaPagamento,
+    data_limite_lancamento: dataLimiteLancamento,
   };
 }
