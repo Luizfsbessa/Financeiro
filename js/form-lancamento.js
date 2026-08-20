@@ -103,9 +103,6 @@ export async function iniciarFormLancamento(user) {
       return;
     }
 
-    const usouVencimentoComoReferencia =
-      resultado.data_referencia_pagamento.getTime() !== resultado.data_sugerida_pagamento.getTime();
-
     preview.innerHTML = `
       <div class="preview-linha">
         <span>Orçamento projetado do mês</span>
@@ -119,9 +116,11 @@ export async function iniciarFormLancamento(user) {
         <span>Status orçamentário</span>
         ${chip(resultado.status_divergencia)}
       </div>
+
+      <div class="preview-secao-titulo">Política de pagamento</div>
       <div class="preview-linha">
-        <span>Antecedência até o pagamento</span>
-        ${chip(resultado.status_antecedencia, `${resultado.dias_antecedencia} dia(s)`)}
+        <span>Antecedência até a política</span>
+        ${chip(resultado.status_antecedencia_politica, `${resultado.dias_antecedencia_politica} dia(s)`)}
       </div>
       <div class="preview-linha">
         <span>Data limite para lançar (10 dias antes)</span>
@@ -131,10 +130,12 @@ export async function iniciarFormLancamento(user) {
         <span>Data sugerida de pagamento (política)</span>
         <strong class="numero-tabular">${formatadorData.format(resultado.data_sugerida_pagamento)}</strong>
       </div>
-      ${usouVencimentoComoReferencia ? `
-      <div class="preview-linha preview-nota">
-        <span>Vencimento real deu mais prazo — usando ${formatadorData.format(resultado.data_referencia_pagamento)} como referência da antecedência.</span>
-      </div>` : ""}
+
+      <div class="preview-secao-titulo">Vencimento real (informado na NF)</div>
+      <div class="preview-linha">
+        <span>Tempo hábil até o vencimento</span>
+        ${chip(resultado.status_tempo_habil_vencimento, `${resultado.dias_tempo_habil_vencimento} dia(s)`)}
+      </div>
     `;
   }
 
