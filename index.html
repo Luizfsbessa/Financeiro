@@ -53,6 +53,7 @@
 
       <ul class="sidebar-nav" id="sidebar-nav">
         <li><a href="#dashboard" data-secao="dashboard" class="ativo">Painel</a></li>
+        <li><a href="#terceiros" data-secao="terceiros">Centros de Terceiros</a></li>
         <li><a href="#lancamento" data-secao="lancamento">Novo lançamento</a></li>
         <li><a href="#ordens-pagamento" data-secao="ordens-pagamento">Ordens de pagamento</a></li>
         <li><a href="#orcamento" data-secao="orcamento">Orçamento &amp; contas</a></li>
@@ -76,6 +77,17 @@
         </div>
       </section>
 
+      <!-- ===== Aba: Centros de Terceiros ===== -->
+      <section id="secao-terceiros" class="secao-conteudo" hidden>
+        <header><h2>Centros de Terceiros</h2></header>
+        <p style="color: var(--ink-400); font-size: var(--text-sm); margin-bottom: var(--space-4); margin-top: calc(-1 * var(--space-4))">
+          Centros de Custo que você processa o pagamento, mas cuja gestão orçamentária é de outra pessoa/área.
+        </p>
+        <div id="terceiros-conteudo">
+          <p class="preview-vazio">Carregando...</p>
+        </div>
+      </section>
+
       <!-- ===== Aba: Novo Lançamento ===== -->
       <section id="secao-lancamento" class="secao-conteudo" hidden>
         <header><h2>Novo Lançamento</h2></header>
@@ -86,6 +98,15 @@
               <label for="campo-centro-custo">Centro de Custo</label>
               <select id="campo-centro-custo" required>
                 <option value="">Carregando...</option>
+              </select>
+            </div>
+
+            <div class="campo">
+              <label for="campo-tipo-lancamento">Tipo de Lançamento</label>
+              <select id="campo-tipo-lancamento" required>
+                <option value="">Selecione</option>
+                <option value="recorrente">Recorrente (mensalidade)</option>
+                <option value="avulso">Avulso (reparo, contratação, consultoria)</option>
               </select>
             </div>
 
@@ -182,6 +203,19 @@
           <button type="submit" class="botao-primario">Registrar Ordem de Pagamento</button>
           <p id="form-op-status" class="form-status" role="status"></p>
         </form>
+
+        <div class="campo-duplo" style="max-width: 720px; margin-bottom: var(--space-4)">
+          <div class="campo">
+            <label for="op-busca-texto">Buscar (Nº OP, Nº Solicitação, Conta)</label>
+            <input type="text" id="op-busca-texto" placeholder="Digite para filtrar..." />
+          </div>
+          <div class="campo">
+            <label for="op-filtro-centro">Filtrar por Centro de Custo</label>
+            <select id="op-filtro-centro">
+              <option value="">Todos os Centros de Custo</option>
+            </select>
+          </div>
+        </div>
 
         <div id="lista-ordens-pagamento">
           <p class="preview-vazio">Carregando...</p>

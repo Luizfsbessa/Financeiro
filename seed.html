@@ -11,17 +11,19 @@
     button { padding: var(--space-3) var(--space-6); background: var(--brand-900); color: var(--paper-0); border: none; border-radius: var(--radius-sm); font-size: var(--text-sm); font-weight: 600; margin-top: var(--space-4); }
     button:disabled { opacity: 0.6; }
     .resultado { margin-top: var(--space-4); font-size: var(--text-sm); color: var(--ink-700); }
+    .aviso { font-size: var(--text-xs); color: var(--brass-500); margin-top: var(--space-2); }
   </style>
 </head>
 <body>
 
   <div class="caixa">
-    <h1 style="font-size: var(--text-lg)">Importar orçamento (planilha real)</h1>
+    <h1 style="font-size: var(--text-lg)">Importar base completa (planilha real)</h1>
     <p style="color: var(--ink-400); font-size: var(--text-sm)">
-      Cria/atualiza os Centros de Custo e Contas Contábeis extraídos da sua planilha, já com o Orçamento Aprovado mês a mês. Seguro rodar mais de uma vez — usa IDs fixos, então só atualiza os mesmos documentos.
+      Cria/atualiza tudo de uma vez: 34 Centros de Custo (próprios + terceiros), 109 Contas Contábeis com Orçamento Aprovado, 124 Serviços/Prestadores, 315 Ordens de Pagamento e 1.175 Lançamentos históricos de 2025/2026.
     </p>
-    <button id="botao-importar">Importar agora</button>
-    <p id="resultado-importar" class="resultado"></p>
+    <p class="aviso">São ~1.700 gravações em lotes — pode levar alguns segundos. Não feche a aba até a mensagem final aparecer.</p>
+    <button id="botao-importar-completo">Importar agora</button>
+    <p id="resultado-importar-completo" class="resultado"></p>
   </div>
 
   <div class="caixa">
@@ -36,42 +38,58 @@
   <script type="module">
     import { observarAutenticacao } from "./js/auth.js";
     import { popularDadosDeExemplo } from "./js/seed-dados-exemplo.js";
-    import { importarOrcamentoDaPlanilha } from "./js/importar-orcamento.js";
+    import { importarBaseCompleta } from "./js/importar-base-completa.js";
 
     let logado = false;
+    const aviso = "Você precisa estar logado. Abra index.html, faça login, depois volte aqui.";
     observarAutenticacao((user) => {
       logado = !!user;
-      const aviso = "Você precisa estar logado. Abra index.html, faça login, depois volte aqui.";
       if (!logado) {
-        document.getElementById("resultado-importar").textContent = aviso;
+        document.getElementById("resultado-importar-completo").textContent = aviso;
         document.getElementById("resultado-seed").textContent = aviso;
       }
     });
 
-    function conectarBotao(botaoId, resultadoId, funcaoAsync) {
-      const botao = document.getElementById(botaoId);
-      const resultado = document.getElementById(resultadoId);
+    const botaoCompleto = document.getElementById("botao-importar-completo");
+    const resultadoCompleto = document.getElementById("resultado-importar-completo");
 
-      botao.addEventListener("click", async () => {
-        if (!logado) {
-          resultado.textContent = "Você precisa estar logado. Abra index.html, faça login, depois volte aqui.";
-          return;
-        }
-        botao.disabled = true;
-        resultado.textContent = "Processando...";
-        try {
-          resultado.textContent = await funcaoAsync();
-        } catch (erro) {
-          console.error(erro);
-          resultado.textContent = "Erro: " + (erro.message || "veja o console (F12) para detalhes.");
-        } finally {
-          botao.disabled = false;
-        }
-      });
-    }
+    botaoCompleto.addEventListener("click", async () => {
+      if (!logado) {
+        resultadoCompleto.textContent = aviso;
+        return;
+      }
+      botaoCompleto.disabled = true;
+      try {
+        resultadoCompleto.textContent = await importarBaseCompleta((msg) => {
+          resultadoCompleto.textContent = msg;
+        });
+      } catch (erro) {
+        console.error(erro);
+        resultadoCompleto.textContent = "Erro: " + (erro.message || "veja o console (F12) para detalhes.");
+      } finally {
+        botaoCompleto.disabled = false;
+      }
+    });
 
-    conectarBotao("botao-importar", "resultado-importar", importarOrcamentoDaPlanilha);
-    conectarBotao("botao-seed", "resultado-seed", popularDadosDeExemplo);
+    const botaoSeed = document.getElementById("botao-seed");
+    const resultadoSeed = document.getElementById("resultado-seed");
+
+    botaoSeed.addEventListener("click", async () => {
+      if (!logado) {
+        resultadoSeed.textContent = aviso;
+        return;
+      }
+      botaoSeed.disabled = true;
+      resultadoSeed.textContent = "Processando...";
+      try {
+        resultadoSeed.textContent = await popularDadosDeExemplo();
+      } catch (erro) {
+        console.error(erro);
+        resultadoSeed.textContent = "Erro: " + (erro.message || "veja o console (F12) para detalhes.");
+      } finally {
+        botaoSeed.disabled = false;
+      }
+    });
   </script>
 </body>
 </html>

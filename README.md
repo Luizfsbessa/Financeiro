@@ -99,16 +99,29 @@ vitale-conciliacao/
 
 > Se você já tinha rodado o `seed.html` antes desta etapa, rode de novo — agora ele também cria uma Ordem de Pagamento de exemplo (saldo R$ 5.000, vinculada à conta "Elevadores"), necessária para conseguir salvar um lançamento de teste. Rodar de novo é seguro: se a OP de exemplo já existir, o seed não mexe no saldo dela (não quer sobrescrever o consumo real de testes anteriores).
 
-## Importar orçamento real de uma planilha
+## Importar a base completa (planilha real, 3 abas)
 
-`seed.html` agora tem duas seções separadas:
+`seed.html` agora tem um único botão de importação real, **"Importar base completa"**, que substitui as importações anteriores (orçamento isolado / fornecedores isolados — os arquivos antigos `importar-orcamento.js` e `importar-fornecedores.js` continuam no repo só por histórico, não usar mais). Ele lê `js/dados-base-completa-importado.js` (gerado a partir de `seed3.xlsx`, 3 abas: orçamento aprovado, fornecedores por centro de custo, lançamentos realizados) e grava em lotes sequenciais (limite do Firestore é 500 operações por `writeBatch`, usamos 400 por segurança):
 
-1. **"Importar orçamento (planilha real)"** — grava os Centros de Custo e Contas Contábeis extraídos de `seed_orcamento_aprovado.xlsx` (11 Centros, 80 combinações de Conta Contábil, cada uma com Orçamento Aprovado mês a mês). Os dados já vêm processados em `js/dados-orcamento-importado.js` — gerado automaticamente a partir da planilha, não é pra editar esse arquivo à mão. Seguro rodar de novo (usa IDs fixos baseados no nome do centro + código da conta).
-2. **"Popular dados de exemplo (teste)"** — continua existindo, separado, só para testar o fluxo sem mexer nos dados reais.
+- **34 Centros de Custo** (11 próprios + 23 de terceiros — campo `tipo_gestao`, vindo direto da coluna "Gestão" da planilha)
+- **109 Contas Contábeis** (com Orçamento Aprovado mês a mês onde a planilha tinha o dado — 28 combinações não tinham e nasceram zeradas)
+- **124 Serviços/Prestadores** (Orçamento Projetado nasce **zerado** — nenhuma das planilhas trouxe esse nível de detalhe; decisão tomada: manter a checagem de divergência por lançamento comparando com o Projetado mesmo assim, então lançamentos reais vão aparecer "COM DIVERGÊNCIA" até alguém preencher os valores)
+- **315 Ordens de Pagamento históricas** — **premissa importante**: como a planilha não informa o saldo original de cada OP (só o que foi gasto), `saldo_total` foi calculado como a soma dos lançamentos contra ela, e `saldo_disponivel` nasce zerado (assume 100% consumido). Não é o valor real autorizado, é uma aproximação para preencher o histórico.
+- **1.175 Lançamentos reais** de 2025/2026, processados pelo mesmo motor de regras (`conciliacao.js`) usado no lançamento manual, com a Data de Lançamento real da planilha como `dataEntrada`.
 
-**Importante — o que falta depois de importar:** a planilha só tinha Centro de Custo + Conta Contábil + Orçamento Aprovado. Não existe nenhum Serviço/Prestador (nível de Orçamento Projetado) vinculado a essas 80 contas ainda — sem isso, a tela "Novo Lançamento" não vai ter opções no campo Serviço para essas contas. Isso precisa ser cadastrado à parte: manualmente, ou me mande uma planilha com o nível de Serviço/Prestador + Orçamento Projetado que eu gero outro import igual a esse.
+Idempotente (`merge: true` nos cadastros) — seguro rodar de novo se a planilha for atualizada. Os lançamentos, porém, são sempre **adicionados** (não têm chave natural pra deduplicar) — rodar a importação duas vezes duplica os 1.175 lançamentos. Se precisar rodar de novo, apague a coleção `lancamentos` no console do Firebase antes.
 
-Para gerar esse tipo de importação a partir de uma planilha nova no futuro, as colunas esperadas são: `competência` (nome do mês por extenso, em português), `Centro_Custo`, `Conta_contábil` (código), `Descrição_conta_contábil`, `orçamento_aprovado` (valor daquele mês).
+## Centros de Terceiros
+
+Centro de Custo agora tem um campo `tipo_gestao`: `"proprio"` (orçamento que você gerencia) ou `"terceiros"` (você só processa o pagamento, a governança é de outra pessoa/área). O Painel mostra só os próprios; a nova aba **"Centros de Terceiros"** no menu lateral mostra só os de terceiros — mesma tabela matriz e heatmap, motor compartilhado (`dashboard.js`, função `iniciarPainelMatriz` parametrizada). Centro de Custo sem `tipo_gestao` definido (dados antigos) é tratado como `"proprio"` por padrão.
+
+## Busca em Ordens de Pagamento
+
+Com centenas de OPs, listar tudo solto não escala — a tela agora tem busca por texto (Nº OP, Nº Solicitação, nome da Conta) e um filtro por Centro de Custo, ambos aplicados sobre os dados já carregados (client-side, sem re-consultar o Firestore a cada tecla). Se o volume crescer muito além da casa de milhares, migrar para filtro via query no Firestore.
+
+## Tipo de Lançamento (Recorrente x Avulso)
+
+O formulário de lançamento agora exige escolher entre "Recorrente (mensalidade)" e "Avulso (reparo, contratação, consultoria)", gravado no campo `tipo_lancamento`. Ainda não afeta nenhuma regra de cálculo — é só categorização, disponível para relatórios/filtros futuros.
 
 ## Próximos módulos (ainda não construídos)
 
