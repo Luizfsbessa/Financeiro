@@ -1,7 +1,14 @@
 // ============================================================
 // dashboard.js
-// Painel de Conciliação — tabela matriz Centro de Custo → Conta
-// Contábil, com Jan–Dez, acumulados e heatmap de Index%.
+// Motor de tabela matriz Centro de Custo → Conta Contábil, com
+// Jan–Dez, acumulados e heatmap de Index%. Reutilizado por DUAS
+// telas diferentes:
+//   - Painel (própio):        iniciarDashboard() / invalidarDashboard()
+//   - Centros de Terceiros:   iniciarPainelTerceiros() / invalidarPainelTerceiros()
+// Ambas chamam o mesmo motor genérico (iniciarPainelMatriz), só
+// filtrando por tipo_gestao e apontando para containers diferentes.
+// Centros sem tipo_gestao definido são tratados como "proprio" —
+// isso preserva dados antigos criados antes desse campo existir.
 //
 // Regra do heatmap (igual ao Looker Studio que desenhamos):
 //   Index <= 95%           → verde
@@ -16,28 +23,27 @@ const CHAVES_MES = ["jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set
 
 const formatadorRS = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 });
 
-let carregado = false;
+const estadoCarregado = new Map(); // containerId -> boolean
 
-/** Inicializa o dashboard — chamado uma vez ao entrar na aba "Painel". */
-export async function iniciarDashboard() {
-  const container = document.getElementById("dashboard-conteudo");
+async function iniciarPainelMatriz({ containerId, filtroTipoGestao, mensagemVazio }) {
+  const container = document.getElementById(containerId);
   if (!container) return;
 
-  container.innerHTML = '<p class="preview-vazio">Carregando dados do painel...</p>';
+  container.innerHTML = '<p class="preview-vazio">Carregando dados...</p>';
 
   try {
-    const [centros, contas] = await Promise.all([listarCentrosCusto(), listarTodasContas()]);
+    const [todosCentros, todasContas] = await Promise.all([listarCentrosCusto(), listarTodasContas()]);
+
+    const centros = todosCentros.filter((c) => (c.tipo_gestao ?? "proprio") === filtroTipoGestao);
+    const centroIds = new Set(centros.map((c) => c.id));
+    const contas = todasContas.filter((c) => centroIds.has(c.centro_custo_id));
 
     if (contas.length === 0) {
-      container.innerHTML = `
-        <div class="placeholder-modulo">
-          Ainda não há Contas Contábeis cadastradas.<br />
-          Use o <code>seed.html</code> para criar dados de exemplo, ou cadastre pelo console do Firebase.
-        </div>`;
+      container.innerHTML = `<div class="placeholder-modulo">${mensagemVazio}</div>`;
+      estadoCarregado.set(containerId, true);
       return;
     }
 
-    // Para cada conta, busca os lançamentos e agrega por mês.
     const linhas = await Promise.all(
       contas.map(async (conta) => {
         const lancamentos = await listarLancamentosPorConta(conta.id);
@@ -48,20 +54,43 @@ export async function iniciarDashboard() {
     );
 
     renderizarTabela(container, centros, linhas);
-    carregado = true;
+    estadoCarregado.set(containerId, true);
   } catch (erro) {
-    console.error("Erro ao carregar dashboard:", erro);
-    container.innerHTML = '<div class="placeholder-modulo">Não foi possível carregar o painel. Veja o console (F12) para detalhes.</div>';
+    console.error(`Erro ao carregar painel (${containerId}):`, erro);
+    container.innerHTML = `<div class="placeholder-modulo">Não foi possível carregar. Erro: ${erro.message || "veja o console (F12)"}.</div>`;
   }
 }
 
-/** Força recarregar mesmo se já tiver carregado antes (ex.: após novo lançamento). */
+export async function iniciarDashboard() {
+  await iniciarPainelMatriz({
+    containerId: "dashboard-conteudo",
+    filtroTipoGestao: "proprio",
+    mensagemVazio: 'Ainda não há Contas Contábeis próprias cadastradas.<br />Use o <code>seed.html</code> para criar dados, ou cadastre pelo console do Firebase.',
+  });
+}
+
 export function invalidarDashboard() {
-  carregado = false;
+  estadoCarregado.delete("dashboard-conteudo");
 }
 
 export function dashboardJaCarregado() {
-  return carregado;
+  return estadoCarregado.get("dashboard-conteudo") === true;
+}
+
+export async function iniciarPainelTerceiros() {
+  await iniciarPainelMatriz({
+    containerId: "terceiros-conteudo",
+    filtroTipoGestao: "terceiros",
+    mensagemVazio: "Ainda não há Centros de Custo de terceiros cadastrados.",
+  });
+}
+
+export function invalidarPainelTerceiros() {
+  estadoCarregado.delete("terceiros-conteudo");
+}
+
+export function painelTerceirosJaCarregado() {
+  return estadoCarregado.get("terceiros-conteudo") === true;
 }
 
 function agregarRealizadoPorMes(lancamentos) {
@@ -80,7 +109,6 @@ function classificarIndex(indexPct) {
 }
 
 function renderizarTabela(container, centros, linhas) {
-  // Agrupa linhas por centro de custo, na ordem em que os centros foram cadastrados.
   const gruposPorCentro = centros.map((centro) => ({
     centro,
     contasDoGrupo: linhas.filter((l) => l.conta?.centro_custo_id === centro.id),
@@ -92,7 +120,7 @@ function renderizarTabela(container, centros, linhas) {
     .map(({ centro, contasDoGrupo }) => {
       const linhaCentro = `
         <tr class="linha-centro">
-          <td colspan="${5 + 12}">${centro.nome}</td>
+          <td colspan="${5 + 12}">${centro.nome}${centro.codigo_centro ? ` <span class="centro-codigo">— ${centro.codigo_centro}</span>` : ""}</td>
         </tr>`;
 
       const linhasConta = contasDoGrupo

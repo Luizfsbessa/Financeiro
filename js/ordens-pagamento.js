@@ -5,6 +5,12 @@
 // Centro de Custo + Conta Contábil. Cada lançamento de NF feito
 // contra essa OP consome parte do saldo (ver registrarLancamentoComOP
 // em firestore.js — o débito acontece numa transação atômica).
+//
+// Com muitas OPs cadastradas, listar tudo solto não escala — a busca
+// filtra CLIENT-SIDE sobre os dados já carregados (busca em texto
+// livre por Nº OP / Nº Solicitação / Conta, + filtro por Centro de
+// Custo). Suficiente até a casa de milhares de OPs; se crescer muito
+// além disso, migrar para filtro via query no Firestore.
 // ============================================================
 
 import {
@@ -19,22 +25,26 @@ const formatadorRS = new Intl.NumberFormat("pt-BR", { style: "currency", currenc
 
 let listenersConectados = false;
 
-/** Inicializa a tela — pode ser chamada toda vez que a aba é aberta; os
- * listeners só são conectados uma vez, mas a lista é sempre recarregada. */
+// Cache em memória da última carga, para a busca filtrar sem refazer a consulta ao Firestore.
+let cacheOrdens = [];
+let cacheCentros = [];
+let cacheContas = [];
+
 export async function iniciarOrdensPagamento() {
   if (!listenersConectados) {
     try {
       await conectarFormulario();
-      listenersConectados = true; // só marca como conectado se deu certo
+      await conectarBusca();
+      listenersConectados = true;
     } catch (erro) {
-      console.error("Erro ao conectar formulário de Ordem de Pagamento:", erro);
+      console.error("Erro ao conectar tela de Ordem de Pagamento:", erro);
       const selCentro = document.getElementById("op-centro-custo");
       if (selCentro) selCentro.innerHTML = '<option value="">Erro ao carregar — veja o console (F12)</option>';
     }
   }
 
   try {
-    await recarregarLista();
+    await recarregarDados();
   } catch (erro) {
     console.error("Erro ao carregar lista de Ordens de Pagamento:", erro);
     const container = document.getElementById("lista-ordens-pagamento");
@@ -92,7 +102,7 @@ async function conectarFormulario() {
       limparSelect(selConta, "Selecione a Conta Contábil");
       status.textContent = "Ordem de Pagamento registrada com sucesso.";
       status.classList.add("sucesso");
-      await recarregarLista();
+      await recarregarDados();
     } catch (erro) {
       console.error("Erro ao registrar Ordem de Pagamento:", erro);
       status.textContent = "Não foi possível registrar. Tente novamente.";
@@ -103,7 +113,16 @@ async function conectarFormulario() {
   });
 }
 
-async function recarregarLista() {
+async function conectarBusca() {
+  const inputBusca = document.getElementById("op-busca-texto");
+  const selFiltroCentro = document.getElementById("op-filtro-centro");
+  if (!inputBusca || !selFiltroCentro) return;
+
+  inputBusca.addEventListener("input", aplicarFiltro);
+  selFiltroCentro.addEventListener("change", aplicarFiltro);
+}
+
+async function recarregarDados() {
   const container = document.getElementById("lista-ordens-pagamento");
   if (!container) return;
 
@@ -115,15 +134,63 @@ async function recarregarLista() {
     listarTodasContas(),
   ]);
 
-  if (ordens.length === 0) {
+  cacheOrdens = ordens;
+  cacheCentros = centros;
+  cacheContas = contas;
+
+  const selFiltroCentro = document.getElementById("op-filtro-centro");
+  if (selFiltroCentro && selFiltroCentro.options.length <= 1) {
+    preencherSelect(selFiltroCentro, [...centros].sort((a, b) => a.nome.localeCompare(b.nome)), "Todos os Centros de Custo");
+    selFiltroCentro.disabled = false;
+  }
+
+  aplicarFiltro();
+}
+
+function aplicarFiltro() {
+  const inputBusca = document.getElementById("op-busca-texto");
+  const selFiltroCentro = document.getElementById("op-filtro-centro");
+  const termo = (inputBusca?.value ?? "").trim().toLowerCase();
+  const centroFiltro = selFiltroCentro?.value ?? "";
+
+  const contasPorId = new Map(cacheContas.map((c) => [c.id, c]));
+  const centrosPorId = new Map(cacheCentros.map((c) => [c.id, c]));
+
+  const filtradas = cacheOrdens.filter((op) => {
+    const conta = contasPorId.get(op.conta_contabil_id);
+    const centro = centrosPorId.get(conta?.centro_custo_id);
+
+    if (centroFiltro && centro?.id !== centroFiltro) return false;
+
+    if (termo) {
+      const alvo = `${op.numero_op ?? ""} ${op.numero_solicitacao ?? ""} ${conta?.nome ?? ""} ${centro?.nome ?? ""}`.toLowerCase();
+      if (!alvo.includes(termo)) return false;
+    }
+
+    return true;
+  });
+
+  renderizarLista(filtradas, contasPorId, centrosPorId);
+}
+
+function renderizarLista(ordens, contasPorId, centrosPorId) {
+  const container = document.getElementById("lista-ordens-pagamento");
+  if (!container) return;
+
+  if (cacheOrdens.length === 0) {
     container.innerHTML = '<div class="placeholder-modulo">Nenhuma Ordem de Pagamento cadastrada ainda.</div>';
+    return;
+  }
+
+  if (ordens.length === 0) {
+    container.innerHTML = '<div class="placeholder-modulo">Nenhuma OP encontrada com esse filtro.</div>';
     return;
   }
 
   const linhas = ordens
     .map((op) => {
-      const conta = contas.find((c) => c.id === op.conta_contabil_id);
-      const centro = centros.find((c) => c.id === conta?.centro_custo_id);
+      const conta = contasPorId.get(op.conta_contabil_id);
+      const centro = centrosPorId.get(conta?.centro_custo_id);
       const saldoTotal = op.saldo_total ?? 0;
       const saldoDisponivel = op.saldo_disponivel ?? saldoTotal;
       const consumido = saldoTotal - saldoDisponivel;
@@ -144,6 +211,7 @@ async function recarregarLista() {
     .join("");
 
   container.innerHTML = `
+    <p style="color: var(--ink-400); font-size: var(--text-xs); margin-bottom: var(--space-2)">${ordens.length} de ${cacheOrdens.length} OPs</p>
     <div class="tabela-scroll">
       <table class="tabela-matriz">
         <thead>
@@ -162,7 +230,7 @@ async function recarregarLista() {
     </div>`;
 }
 
-// --- Utilitários locais (mesmo padrão simples usado em form-lancamento.js) ---
+// --- Utilitários locais ---
 
 function preencherSelect(select, itens, placeholder) {
   select.innerHTML = `<option value="">${placeholder}</option>`;
@@ -172,7 +240,6 @@ function preencherSelect(select, itens, placeholder) {
     option.textContent = item.nome;
     select.appendChild(option);
   });
-  select.disabled = itens.length === 0;
 }
 
 function limparSelect(select, placeholder) {

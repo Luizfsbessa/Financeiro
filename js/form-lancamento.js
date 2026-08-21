@@ -15,7 +15,7 @@ import {
 } from "./firestore.js";
 import { processarLancamento } from "./conciliacao.js";
 import { dadosDoLancador } from "./auth.js";
-import { invalidarDashboard } from "./dashboard.js";
+import { invalidarDashboard, invalidarPainelTerceiros } from "./dashboard.js";
 
 const formatadorRS = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" });
 const formatadorData = new Intl.DateTimeFormat("pt-BR");
@@ -32,6 +32,7 @@ export async function iniciarFormLancamento(user) {
   if (!form) return; // seção ainda não está no DOM (ex.: outra aba ativa)
 
   const selCentro = document.getElementById("campo-centro-custo");
+  const selTipoLancamento = document.getElementById("campo-tipo-lancamento");
   const selConta = document.getElementById("campo-conta-contabil");
   const selServico = document.getElementById("campo-servico");
   const selOP = document.getElementById("campo-ordem-pagamento");
@@ -185,6 +186,11 @@ export async function iniciarFormLancamento(user) {
       return;
     }
 
+    if (!selTipoLancamento.value) {
+      mensagemStatus.textContent = "Selecione o Tipo de Lançamento (recorrente ou avulso).";
+      return;
+    }
+
     const valorNF = parseFloat(inputValor.value);
     const saldoDisponivelOP = ordemPagamentoSelecionada.saldo_disponivel ?? ordemPagamentoSelecionada.saldo_total ?? 0;
 
@@ -222,6 +228,7 @@ export async function iniciarFormLancamento(user) {
           conta_contabil_id: selConta.value,
           servico_id: selServico.value,
           servico_nome: servicoSelecionado.nome,
+          tipo_lancamento: selTipoLancamento.value,
           valor_nf: valorNF,
           data_emissao: dataEmissao,
           data_vencimento: dataVencimento,
@@ -239,6 +246,7 @@ export async function iniciarFormLancamento(user) {
       limparSelect(selOP, "Selecione a Conta Contábil primeiro");
       atualizarPreview(null);
       invalidarDashboard();
+      invalidarPainelTerceiros();
       mensagemStatus.textContent = "Lançamento salvo com sucesso.";
       mensagemStatus.classList.add("sucesso");
     } catch (erro) {

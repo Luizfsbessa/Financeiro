@@ -12,7 +12,7 @@
 
 import { entrarComGoogle, sair, observarAutenticacao, dadosDoLancador } from "./auth.js";
 import { iniciarFormLancamento } from "./form-lancamento.js";
-import { iniciarDashboard, invalidarDashboard, dashboardJaCarregado } from "./dashboard.js";
+import { iniciarDashboard, invalidarDashboard, dashboardJaCarregado, iniciarPainelTerceiros, invalidarPainelTerceiros, painelTerceirosJaCarregado } from "./dashboard.js";
 import { iniciarOrdensPagamento } from "./ordens-pagamento.js";
 
 const telaLogin = document.getElementById("tela-login");
@@ -49,6 +49,10 @@ function irParaSecao(nomeSecao, user) {
 
   if (nomeSecao === "dashboard" && !dashboardJaCarregado()) {
     iniciarDashboard();
+  }
+
+  if (nomeSecao === "terceiros" && !painelTerceirosJaCarregado()) {
+    iniciarPainelTerceiros();
   }
 
   if (nomeSecao === "ordens-pagamento") {
