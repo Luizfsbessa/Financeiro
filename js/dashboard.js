@@ -112,7 +112,10 @@ function renderizarTabela(container, centros, linhas) {
   const gruposPorCentro = centros.map((centro) => ({
     centro,
     contasDoGrupo: linhas.filter((l) => l.conta?.centro_custo_id === centro.id),
-  })).filter((g) => g.contasDoGrupo.length > 0);
+  }));
+  // Nota: centros sem nenhuma Conta Contábil ainda aparecem (com uma linha
+  // avisando que estão vazios) — antes eram escondidos por completo, o que
+  // fazia parecer que um Centro recém-criado "sumia" do Painel.
 
   const cabecalhoMeses = NOMES_MES_ABREV.map((m) => `<th class="col-mes">${m}</th>`).join("");
 
@@ -123,7 +126,9 @@ function renderizarTabela(container, centros, linhas) {
           <td colspan="${5 + 12}">${centro.nome}${centro.codigo_centro ? ` <span class="centro-codigo">— ${centro.codigo_centro}</span>` : ""}</td>
         </tr>`;
 
-      const linhasConta = contasDoGrupo
+      const linhasConta = contasDoGrupo.length === 0
+        ? `<tr><td colspan="${5 + 12}" style="color: var(--ink-400); font-style: italic">Nenhuma Conta Contábil cadastrada ainda.</td></tr>`
+        : contasDoGrupo
         .map(({ conta, realizadoPorMes }) => {
           const acumuladoRealizado = realizadoPorMes.reduce((a, b) => a + b, 0);
           const aprovadoPorMes = CHAVES_MES.map((chave) => conta.orcamento_aprovado?.[chave] ?? 0);

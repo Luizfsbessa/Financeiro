@@ -9,6 +9,7 @@
 import {
   listarCentrosCusto,
   listarContasPorCentro,
+  listarTodasContas,
   listarServicosPorConta,
   criarCentroCusto,
   criarContaContabil,
@@ -30,6 +31,7 @@ let listenersConectados = false;
 let centroSelecionadoId = null;
 let contaSelecionadaId = null; // conta cujos Serviços estão sendo exibidos
 let contaEmEdicaoId = null; // null = criando nova Conta
+let catalogoContas = []; // {chave, codigo, nome} únicos, extraídos de todas as Contas já cadastradas
 let servicoEmEdicaoId = null; // null = criando novo Serviço
 
 export async function iniciarOrcamento() {
@@ -101,10 +103,12 @@ function conectarFormularioCentro() {
       inputNome.value = "";
       status.textContent = "Centro de Custo criado.";
       status.classList.add("sucesso");
+      invalidarDashboard();
+      invalidarPainelTerceiros();
       await recarregarCentros();
     } catch (erro) {
       console.error(erro);
-      status.textContent = "Não foi possível criar. Tente novamente.";
+      status.textContent = "Erro: " + (erro.message || "não foi possível criar, tente novamente.");
       status.classList.remove("sucesso");
     } finally {
       botao.disabled = false;
@@ -146,13 +150,41 @@ async function recarregarCentros() {
 
 // --- Conta Contábil ---
 
+async function montarCatalogoContas() {
+  const todas = await listarTodasContas();
+  const porChave = new Map();
+  todas.forEach((c) => {
+    if (!c.conta_codigo) return;
+    const chave = String(c.conta_codigo);
+    if (!porChave.has(chave)) porChave.set(chave, { chave, codigo: c.conta_codigo, nome: c.nome });
+  });
+  catalogoContas = [...porChave.values()].sort((a, b) => a.codigo.localeCompare(b.codigo));
+
+  const sel = document.getElementById("orc-conta-catalogo");
+  if (!sel) return;
+  sel.innerHTML = '<option value="">+ Nova (digitar manualmente)</option>';
+  catalogoContas.forEach((item) => {
+    const option = document.createElement("option");
+    option.value = item.chave;
+    option.textContent = `${item.codigo} — ${item.nome}`;
+    sel.appendChild(option);
+  });
+}
+
 function conectarFormularioConta() {
   const form = document.getElementById("form-conta-contabil");
   if (!form) return;
 
-  document.getElementById("orc-botao-nova-conta")?.addEventListener("click", () => {
+  document.getElementById("orc-botao-nova-conta")?.addEventListener("click", async () => {
     contaEmEdicaoId = null;
+    await montarCatalogoContas();
     mostrarFormConta();
+  });
+
+  document.getElementById("orc-conta-catalogo")?.addEventListener("change", (evento) => {
+    const item = catalogoContas.find((c) => c.chave === evento.target.value);
+    document.getElementById("orc-conta-nome").value = item?.nome ?? "";
+    document.getElementById("orc-conta-codigo").value = item?.codigo ?? "";
   });
 
   document.getElementById("orc-cancelar-conta")?.addEventListener("click", () => esconderFormConta());
@@ -170,6 +202,10 @@ function conectarFormularioConta() {
       status.textContent = "Digite o nome da conta.";
       return;
     }
+    if (!inputCodigo.value.trim()) {
+      status.textContent = "O código da Conta Contábil é obrigatório (necessário para a conciliação).";
+      return;
+    }
 
     const orcamentoAprovado = lerGradeMeses("orc-conta-mes");
     botao.disabled = true;
@@ -178,7 +214,7 @@ function conectarFormularioConta() {
       if (contaEmEdicaoId) {
         await atualizarContaContabil(contaEmEdicaoId, {
           nome: inputNome.value.trim(),
-          conta_codigo: inputCodigo.value.trim() || null,
+          conta_codigo: inputCodigo.value.trim(),
           orcamento_aprovado: orcamentoAprovado,
         });
         status.textContent = "Conta Contábil atualizada.";
@@ -198,7 +234,7 @@ function conectarFormularioConta() {
       await recarregarContas();
     } catch (erro) {
       console.error(erro);
-      status.textContent = "Não foi possível salvar. Tente novamente.";
+      status.textContent = "Erro: " + (erro.message || "não foi possível salvar, tente novamente.");
       status.classList.remove("sucesso");
     } finally {
       botao.disabled = false;
@@ -260,10 +296,11 @@ async function recarregarContas() {
     : '<p class="preview-vazio">Nenhuma Conta Contábil neste Centro de Custo ainda.</p>';
 
   container.querySelectorAll("[data-acao='editar-conta']").forEach((botao) => {
-    botao.addEventListener("click", (evento) => {
+    botao.addEventListener("click", async (evento) => {
       const contaId = evento.target.closest("tr").dataset.contaId;
       const conta = contas.find((c) => c.id === contaId);
       contaEmEdicaoId = contaId;
+      await montarCatalogoContas();
       mostrarFormConta(conta);
     });
   });
@@ -322,7 +359,7 @@ function conectarFormularioServico() {
       await recarregarServicos();
     } catch (erro) {
       console.error(erro);
-      status.textContent = "Não foi possível salvar. Tente novamente.";
+      status.textContent = "Erro: " + (erro.message || "não foi possível salvar, tente novamente.");
       status.classList.remove("sucesso");
     } finally {
       botao.disabled = false;
