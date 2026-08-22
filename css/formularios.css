@@ -178,6 +178,30 @@
 }
 .botao-link:hover { text-decoration: underline; }
 
+.relatorio-abas {
+  display: flex;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+  margin-bottom: var(--space-4);
+}
+
+.botao-relatorio {
+  padding: var(--space-2) var(--space-4);
+  background: var(--paper-1);
+  border: 1px solid var(--line-100);
+  border-radius: 999px;
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--ink-700);
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+.botao-relatorio:hover { border-color: var(--brass-500); }
+.botao-relatorio.ativo {
+  background: var(--brand-900);
+  border-color: var(--brand-900);
+  color: var(--paper-0);
+}
+
 .autocomplete-lista {
   position: absolute;
   top: 100%;
