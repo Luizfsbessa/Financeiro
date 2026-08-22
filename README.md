@@ -80,6 +80,8 @@ vitale-conciliacao/
 │   ├── dashboard.js          → tabela matriz + heatmap
 │   ├── ordens-pagamento.js   → cadastro de OPs e consumo de saldo por lançamento
 │   ├── orcamento.js          → cadastro de Centro de Custo, Conta Contábil e Serviço
+│   ├── relatorios.js          → 4 relatórios + exportação Excel/PDF
+│   ├── exportadores.js        → exportação genérica (Excel via SheetJS, PDF via jsPDF)
 │   ├── seed-dados-exemplo.js → dados de teste (usar só em desenvolvimento)
 │   └── app.js                → liga autenticação, roteamento de abas e módulos
 └── icons/               → ícones do PWA (192x192 e 512x512 — adicionar depois)
@@ -133,6 +135,18 @@ A aba "Orçamento & Contas" agora é funcional — não depende mais de `seed.ht
 - **Serviço/Prestador:** clique em "Serviços" numa linha de Conta Contábil, depois "+ Novo Serviço" (ou "Editar") — nome + grid dos 12 meses pro Orçamento Projetado.
 
 Criar/editar uma Conta Contábil invalida o cache do Painel e de Centros de Terceiros automaticamente, então o heatmap reflete o novo Orçamento Aprovado na próxima vez que você abrir essas abas.
+
+## Relatórios
+
+Quatro relatórios prontos, cada um exportável em **Excel (.xlsx)** e **PDF** pelos mesmos dois botões:
+
+- **Divergências** — todos os lançamentos com `status_divergencia = COM_DIVERGENCIA`, ordenados do maior desvio pro menor.
+- **Ordens de Pagamento** — todas as OPs com saldo total/disponível/% consumido, com uma coluna de status (OK / Saldo baixo ≥80% / Esgotado), ordenadas do mais consumido pro menos.
+- **Painel — Próprios** e **Painel — Terceiros** — a mesma tabela matriz (Jan–Dez, Acumulados, Index%) do Painel/Centros de Terceiros, só que em formato exportável.
+
+A exportação usa duas bibliotecas carregadas via CDN **sob demanda** (só quando você entra na aba Relatórios, não pesa o carregamento inicial do app): [SheetJS](https://cdnjs.cloudflare.com/ajax/libs/xlsx) pro Excel e [jsPDF + autoTable](https://cdnjs.cloudflare.com/ajax/libs/jspdf) pro PDF. Isso significa que gerar relatório **exige internet** no momento do clique (além da conexão com o Firebase, que já era necessária).
+
+Todo relatório novo só precisa de uma função que retorne `{ titulo, arquivo, colunas, linhas }` — `exportadores.js` (Excel/PDF) e a renderização em tela já são genéricos e reaproveitam qualquer formato desse.
 
 ## Próximos módulos (ainda não construídos)
 
