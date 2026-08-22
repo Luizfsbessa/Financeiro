@@ -138,3 +138,42 @@
 .chip-divergencia { background: var(--status-divergencia-bg); color: var(--status-divergencia-fg); }
 
 .secao-conteudo[hidden] { display: none; }
+
+/* --- Orçamento & Contas: grid de 12 meses e botões-link em tabela --- */
+.grade-meses {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
+  gap: var(--space-3);
+  margin: var(--space-2) 0 var(--space-2);
+}
+
+.grade-mes-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.grade-mes-item label {
+  font-size: var(--text-xs);
+  color: var(--ink-400);
+}
+
+.grade-mes-item input {
+  font-family: var(--font-ledger);
+  font-variant-numeric: tabular-nums;
+  padding: var(--space-1) var(--space-2);
+  border: 1px solid var(--line-100);
+  border-radius: var(--radius-sm);
+  background: var(--paper-0);
+  width: 100%;
+}
+
+.botao-link {
+  background: none;
+  border: none;
+  color: var(--brass-500);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  padding: 0;
+}
+.botao-link:hover { text-decoration: underline; }
