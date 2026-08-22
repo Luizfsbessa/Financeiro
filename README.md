@@ -79,6 +79,7 @@ vitale-conciliacao/
 │   ├── form-lancamento.js   → tela de lançamento com preview em tempo real
 │   ├── dashboard.js          → tabela matriz + heatmap
 │   ├── ordens-pagamento.js   → cadastro de OPs e consumo de saldo por lançamento
+│   ├── orcamento.js          → cadastro de Centro de Custo, Conta Contábil e Serviço
 │   ├── seed-dados-exemplo.js → dados de teste (usar só em desenvolvimento)
 │   └── app.js                → liga autenticação, roteamento de abas e módulos
 └── icons/               → ícones do PWA (192x192 e 512x512 — adicionar depois)
@@ -123,10 +124,19 @@ Com centenas de OPs, listar tudo solto não escala — a tela agora tem busca po
 
 O formulário de lançamento agora exige escolher entre "Recorrente (mensalidade)" e "Avulso (reparo, contratação, consultoria)", gravado no campo `tipo_lancamento`. Ainda não afeta nenhuma regra de cálculo — é só categorização, disponível para relatórios/filtros futuros.
 
+## Orçamento & Contas (cadastro direto no app)
+
+A aba "Orçamento & Contas" agora é funcional — não depende mais de `seed.html` ou do console do Firebase para o dia a dia:
+
+- **Novo Centro de Custo:** nome + Gestão (Próprio/Terceiros).
+- **Conta Contábil:** selecione um Centro, clique em "+ Nova Conta Contábil" (ou "Editar" numa existente) — formulário com nome, código opcional e um grid dos 12 meses pro Orçamento Aprovado.
+- **Serviço/Prestador:** clique em "Serviços" numa linha de Conta Contábil, depois "+ Novo Serviço" (ou "Editar") — nome + grid dos 12 meses pro Orçamento Projetado.
+
+Criar/editar uma Conta Contábil invalida o cache do Painel e de Centros de Terceiros automaticamente, então o heatmap reflete o novo Orçamento Aprovado na próxima vez que você abrir essas abas.
+
 ## Próximos módulos (ainda não construídos)
 
 - Upload de foto da NF (Storage) — adiado, veja a seção sobre o plano Blaze acima.
-- Tela de cadastro de Orçamento &amp; Contas dentro do próprio app (hoje só dá para cadastrar via `seed.html` ou diretamente no console do Firebase).
 - Filtros no painel (por período, Centro de Custo, usuário) — hoje mostra o ano acumulado inteiro.
 - Regras de segurança por papel (hoje qualquer usuário logado pode editar qualquer coisa — está OK para desenvolvimento, mas precisa refinar antes de usar com o condomínio de verdade).
 - **Multi-workspace (para virar produto de verdade):** hoje todos os dados vivem soltos nas coleções `centros_custo`, `contas_contabeis`, `servicos` e `lancamentos` — ou seja, é um projeto Firebase por cliente/uso. Para usar isso em vários contextos diferentes (não só o condomínio) dentro do mesmo projeto, o próximo passo estrutural é introduzir um conceito de "workspace" (ex.: `workspaces/{id}/centros_custo/...`), com cada usuário vinculado a um ou mais workspaces — isso já habilita usar o Bills tanto pro condomínio quanto para outra necessidade, sem misturar os dados. Vale planejar antes de crescer muito o cadastro atual, porque migrar depois dá mais trabalho do que decidir agora.
