@@ -151,24 +151,30 @@ async function recarregarCentros() {
 // --- Conta Contábil ---
 
 async function montarCatalogoContas() {
-  const todas = await listarTodasContas();
-  const porChave = new Map();
-  todas.forEach((c) => {
-    if (!c.conta_codigo) return;
-    const chave = String(c.conta_codigo);
-    if (!porChave.has(chave)) porChave.set(chave, { chave, codigo: c.conta_codigo, nome: c.nome });
-  });
-  catalogoContas = [...porChave.values()].sort((a, b) => a.codigo.localeCompare(b.codigo));
-
   const sel = document.getElementById("orc-conta-catalogo");
-  if (!sel) return;
-  sel.innerHTML = '<option value="">+ Nova (digitar manualmente)</option>';
-  catalogoContas.forEach((item) => {
-    const option = document.createElement("option");
-    option.value = item.chave;
-    option.textContent = `${item.codigo} — ${item.nome}`;
-    sel.appendChild(option);
-  });
+  try {
+    const todas = await listarTodasContas();
+    const porChave = new Map();
+    todas.forEach((c) => {
+      if (!c.conta_codigo) return;
+      const chave = String(c.conta_codigo);
+      if (!porChave.has(chave)) porChave.set(chave, { chave, codigo: c.conta_codigo, nome: c.nome });
+    });
+    catalogoContas = [...porChave.values()].sort((a, b) => a.codigo.localeCompare(b.codigo));
+    console.log(`[orcamento] catálogo de contas: ${todas.length} contas no total, ${catalogoContas.length} códigos únicos`);
+
+    if (!sel) return;
+    sel.innerHTML = '<option value="">+ Nova (digitar manualmente)</option>';
+    catalogoContas.forEach((item) => {
+      const option = document.createElement("option");
+      option.value = item.chave;
+      option.textContent = `${item.codigo} — ${item.nome}`;
+      sel.appendChild(option);
+    });
+  } catch (erro) {
+    console.error("[orcamento] erro ao montar catálogo de contas:", erro);
+    if (sel) sel.innerHTML = '<option value="">+ Nova (erro ao carregar catálogo — veja o console)</option>';
+  }
 }
 
 function conectarFormularioConta() {
@@ -177,7 +183,7 @@ function conectarFormularioConta() {
 
   document.getElementById("orc-botao-nova-conta")?.addEventListener("click", async () => {
     contaEmEdicaoId = null;
-    await montarCatalogoContas();
+    await montarCatalogoContas(); // já trata erro internamente, nunca lança
     mostrarFormConta();
   });
 
@@ -247,13 +253,23 @@ function mostrarFormConta(conta = null) {
   const titulo = document.getElementById("orc-conta-titulo");
   const gradeContainer = document.getElementById("orc-conta-grade-container");
   const status = document.getElementById("orc-status-conta");
+  const selCatalogo = document.getElementById("orc-conta-catalogo");
+  const inputNome = document.getElementById("orc-conta-nome");
+  const inputCodigo = document.getElementById("orc-conta-codigo");
 
-  document.getElementById("orc-conta-nome").value = conta?.nome ?? "";
-  document.getElementById("orc-conta-codigo").value = conta?.conta_codigo ?? "";
+  // Limpeza explícita de TODOS os campos antes de preencher — evita resíduo
+  // de uma edição anterior (ou autofill do navegador) vazando pro formulário.
+  inputNome.value = "";
+  inputCodigo.value = "";
+  if (selCatalogo) selCatalogo.value = "";
+
+  inputNome.value = conta?.nome ?? "";
+  inputCodigo.value = conta?.conta_codigo ?? "";
   gradeContainer.innerHTML = montarGradeMeses("orc-conta-mes", conta?.orcamento_aprovado ?? {});
   titulo.textContent = conta ? `Editando: ${conta.nome}` : "Nova Conta Contábil";
   status.textContent = "";
   painel.hidden = false;
+  inputNome.focus();
 }
 
 function esconderFormConta() {
