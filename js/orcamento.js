@@ -32,6 +32,8 @@ let centroSelecionadoId = null;
 let contaSelecionadaId = null; // conta cujos Serviços estão sendo exibidos
 let contaEmEdicaoId = null; // null = criando nova Conta
 let catalogoContas = []; // {chave, codigo, nome} únicos, extraídos de todas as Contas já cadastradas
+let timeoutFecharPainelConta = null;
+let timeoutFecharPainelServico = null;
 let servicoEmEdicaoId = null; // null = criando novo Serviço
 
 export async function iniciarOrcamento() {
@@ -134,7 +136,9 @@ async function recarregarCentros() {
 
   if (valorAnterior && centros.some((c) => c.id === valorAnterior)) {
     sel.value = valorAnterior;
-  } else if (!sel.dataset.listenerAdicionado) {
+    centroSelecionadoId = valorAnterior; // sel.value = ... não dispara 'change', então sincroniza manualmente
+  }
+  if (!sel.dataset.listenerAdicionado) {
     sel.addEventListener("change", () => {
       centroSelecionadoId = sel.value || null;
       contaSelecionadaId = null;
@@ -151,7 +155,6 @@ async function recarregarCentros() {
 // --- Conta Contábil ---
 
 async function montarCatalogoContas() {
-  const sel = document.getElementById("orc-conta-catalogo");
   try {
     const todas = await listarTodasContas();
     const porChave = new Map();
@@ -162,18 +165,9 @@ async function montarCatalogoContas() {
     });
     catalogoContas = [...porChave.values()].sort((a, b) => a.codigo.localeCompare(b.codigo));
     console.log(`[orcamento] catálogo de contas: ${todas.length} contas no total, ${catalogoContas.length} códigos únicos`);
-
-    if (!sel) return;
-    sel.innerHTML = '<option value="">+ Nova (digitar manualmente)</option>';
-    catalogoContas.forEach((item) => {
-      const option = document.createElement("option");
-      option.value = item.chave;
-      option.textContent = `${item.codigo} — ${item.nome}`;
-      sel.appendChild(option);
-    });
   } catch (erro) {
     console.error("[orcamento] erro ao montar catálogo de contas:", erro);
-    if (sel) sel.innerHTML = '<option value="">+ Nova (erro ao carregar catálogo — veja o console)</option>';
+    catalogoContas = [];
   }
 }
 
@@ -181,35 +175,77 @@ function conectarFormularioConta() {
   const form = document.getElementById("form-conta-contabil");
   if (!form) return;
 
+  const inputBusca = document.getElementById("orc-conta-busca");
+  const listaSugestoes = document.getElementById("orc-conta-sugestoes");
+
   document.getElementById("orc-botao-nova-conta")?.addEventListener("click", async () => {
     contaEmEdicaoId = null;
     await montarCatalogoContas(); // já trata erro internamente, nunca lança
     mostrarFormConta();
   });
 
-  document.getElementById("orc-conta-catalogo")?.addEventListener("change", (evento) => {
-    const item = catalogoContas.find((c) => c.chave === evento.target.value);
-    document.getElementById("orc-conta-nome").value = item?.nome ?? "";
-    document.getElementById("orc-conta-codigo").value = item?.codigo ?? "";
+  inputBusca?.addEventListener("input", () => {
+    const termo = inputBusca.value.trim().toLowerCase();
+    if (!termo) {
+      listaSugestoes.hidden = true;
+      return;
+    }
+    const resultados = catalogoContas
+      .filter((c) => c.nome.toLowerCase().includes(termo) || c.codigo.toLowerCase().includes(termo))
+      .slice(0, 8);
+
+    listaSugestoes.innerHTML = resultados.length
+      ? resultados
+          .map(
+            (item) =>
+              `<div class="autocomplete-item" data-chave="${item.chave}"><span class="codigo">${item.codigo}</span>${item.nome}</div>`
+          )
+          .join("")
+      : '<div class="autocomplete-vazio">Nenhuma conta encontrada — pode digitar uma nova abaixo.</div>';
+    listaSugestoes.hidden = false;
+
+    listaSugestoes.querySelectorAll("[data-chave]").forEach((item) => {
+      item.addEventListener("click", () => {
+        const dados = catalogoContas.find((c) => c.chave === item.dataset.chave);
+        document.getElementById("orc-conta-nome").value = dados?.nome ?? "";
+        document.getElementById("orc-conta-codigo").value = dados?.codigo ?? "";
+        inputBusca.value = "";
+        listaSugestoes.hidden = true;
+      });
+    });
+  });
+
+  // Esconde a lista de sugestões ao clicar fora dela
+  document.addEventListener("click", (evento) => {
+    if (!listaSugestoes || listaSugestoes.hidden) return;
+    if (evento.target !== inputBusca && !listaSugestoes.contains(evento.target)) {
+      listaSugestoes.hidden = true;
+    }
   });
 
   document.getElementById("orc-cancelar-conta")?.addEventListener("click", () => esconderFormConta());
 
   form.addEventListener("submit", async (evento) => {
     evento.preventDefault();
-    if (!centroSelecionadoId) return;
 
     const inputNome = document.getElementById("orc-conta-nome");
     const inputCodigo = document.getElementById("orc-conta-codigo");
     const status = document.getElementById("orc-status-conta");
     const botao = form.querySelector('button[type="submit"]');
 
+    if (!centroSelecionadoId) {
+      status.textContent = "Nenhum Centro de Custo selecionado — selecione um antes de criar a conta.";
+      status.classList.remove("sucesso");
+      return;
+    }
     if (!inputNome.value.trim()) {
       status.textContent = "Digite o nome da conta.";
+      status.classList.remove("sucesso");
       return;
     }
     if (!inputCodigo.value.trim()) {
       status.textContent = "O código da Conta Contábil é obrigatório (necessário para a conciliação).";
+      status.classList.remove("sucesso");
       return;
     }
 
@@ -218,6 +254,7 @@ function conectarFormularioConta() {
 
     try {
       if (contaEmEdicaoId) {
+        console.log("[orcamento] atualizando conta", contaEmEdicaoId, { nome: inputNome.value, codigo: inputCodigo.value });
         await atualizarContaContabil(contaEmEdicaoId, {
           nome: inputNome.value.trim(),
           conta_codigo: inputCodigo.value.trim(),
@@ -225,21 +262,26 @@ function conectarFormularioConta() {
         });
         status.textContent = "Conta Contábil atualizada.";
       } else {
-        await criarContaContabil({
+        console.log("[orcamento] criando conta", { nome: inputNome.value, codigo: inputCodigo.value, centro: centroSelecionadoId });
+        const novoId = await criarContaContabil({
           nome: inputNome.value,
           contaCodigo: inputCodigo.value,
           centroCustoId: centroSelecionadoId,
           orcamentoAprovado,
         });
+        console.log("[orcamento] conta criada com sucesso, id:", novoId);
         status.textContent = "Conta Contábil criada.";
       }
       status.classList.add("sucesso");
       invalidarDashboard();
       invalidarPainelTerceiros();
-      esconderFormConta();
       await recarregarContas();
+      // Mantém a mensagem de sucesso visível por um instante antes de fechar
+      // o painel — antes disso, um sucesso "silencioso" era indistinguível
+      // de uma falha, porque o painel (com a mensagem) sumia na mesma hora.
+      timeoutFecharPainelConta = setTimeout(() => esconderFormConta(), 1400);
     } catch (erro) {
-      console.error(erro);
+      console.error("[orcamento] erro ao salvar conta:", erro);
       status.textContent = "Erro: " + (erro.message || "não foi possível salvar, tente novamente.");
       status.classList.remove("sucesso");
     } finally {
@@ -249,11 +291,16 @@ function conectarFormularioConta() {
 }
 
 function mostrarFormConta(conta = null) {
+  if (timeoutFecharPainelConta) {
+    clearTimeout(timeoutFecharPainelConta);
+    timeoutFecharPainelConta = null;
+  }
   const painel = document.getElementById("orc-painel-conta");
   const titulo = document.getElementById("orc-conta-titulo");
   const gradeContainer = document.getElementById("orc-conta-grade-container");
   const status = document.getElementById("orc-status-conta");
-  const selCatalogo = document.getElementById("orc-conta-catalogo");
+  const selCatalogo = document.getElementById("orc-conta-busca");
+  const listaSugestoes = document.getElementById("orc-conta-sugestoes");
   const inputNome = document.getElementById("orc-conta-nome");
   const inputCodigo = document.getElementById("orc-conta-codigo");
 
@@ -262,6 +309,7 @@ function mostrarFormConta(conta = null) {
   inputNome.value = "";
   inputCodigo.value = "";
   if (selCatalogo) selCatalogo.value = "";
+  if (listaSugestoes) listaSugestoes.hidden = true;
 
   inputNome.value = conta?.nome ?? "";
   inputCodigo.value = conta?.conta_codigo ?? "";
@@ -348,14 +396,19 @@ function conectarFormularioServico() {
 
   form.addEventListener("submit", async (evento) => {
     evento.preventDefault();
-    if (!contaSelecionadaId) return;
 
     const inputNome = document.getElementById("orc-servico-nome");
     const status = document.getElementById("orc-status-servico");
     const botao = form.querySelector('button[type="submit"]');
 
+    if (!contaSelecionadaId) {
+      status.textContent = "Nenhuma Conta Contábil selecionada — clique em 'Serviços' numa conta antes.";
+      status.classList.remove("sucesso");
+      return;
+    }
     if (!inputNome.value.trim()) {
       status.textContent = "Digite o nome do serviço/prestador.";
+      status.classList.remove("sucesso");
       return;
     }
 
@@ -364,17 +417,20 @@ function conectarFormularioServico() {
 
     try {
       if (servicoEmEdicaoId) {
+        console.log("[orcamento] atualizando serviço", servicoEmEdicaoId);
         await atualizarServico(servicoEmEdicaoId, { nome: inputNome.value.trim(), orcamento_projetado: orcamentoProjetado });
         status.textContent = "Serviço atualizado.";
       } else {
-        await criarServico({ nome: inputNome.value, contaContabilId: contaSelecionadaId, orcamentoProjetado });
+        console.log("[orcamento] criando serviço", { nome: inputNome.value, conta: contaSelecionadaId });
+        const novoId = await criarServico({ nome: inputNome.value, contaContabilId: contaSelecionadaId, orcamentoProjetado });
+        console.log("[orcamento] serviço criado com sucesso, id:", novoId);
         status.textContent = "Serviço criado.";
       }
       status.classList.add("sucesso");
-      esconderFormServico();
       await recarregarServicos();
+      timeoutFecharPainelServico = setTimeout(() => esconderFormServico(), 1400);
     } catch (erro) {
-      console.error(erro);
+      console.error("[orcamento] erro ao salvar serviço:", erro);
       status.textContent = "Erro: " + (erro.message || "não foi possível salvar, tente novamente.");
       status.classList.remove("sucesso");
     } finally {
@@ -384,6 +440,10 @@ function conectarFormularioServico() {
 }
 
 function mostrarFormServico(servico = null) {
+  if (timeoutFecharPainelServico) {
+    clearTimeout(timeoutFecharPainelServico);
+    timeoutFecharPainelServico = null;
+  }
   const painel = document.getElementById("orc-painel-servico");
   const titulo = document.getElementById("orc-servico-titulo-form");
   const gradeContainer = document.getElementById("orc-servico-grade-container");
