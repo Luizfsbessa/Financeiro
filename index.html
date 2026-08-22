@@ -49,21 +49,44 @@
   <!-- ===================== APP SHELL (pós-login) ===================== -->
   <div id="app-shell">
     <aside class="sidebar">
-      <div class="sidebar-marca">Bills</div>
+      <div class="sidebar-topo">
+        <div class="sidebar-marca">Bills</div>
+        <button id="sidebar-toggle" class="sidebar-toggle" title="Recolher menu" aria-label="Recolher menu">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M15 6l-6 6 6 6"/></svg>
+        </button>
+      </div>
 
       <ul class="sidebar-nav" id="sidebar-nav">
-        <li><a href="#dashboard" data-secao="dashboard" class="ativo">Painel</a></li>
-        <li><a href="#terceiros" data-secao="terceiros">Centros de Terceiros</a></li>
-        <li><a href="#lancamento" data-secao="lancamento">Novo lançamento</a></li>
-        <li><a href="#ordens-pagamento" data-secao="ordens-pagamento">Ordens de pagamento</a></li>
-        <li><a href="#orcamento" data-secao="orcamento">Orçamento &amp; contas</a></li>
-        <li><a href="#relatorios" data-secao="relatorios">Relatórios</a></li>
+        <li><a href="#dashboard" data-secao="dashboard" class="ativo" title="Painel">
+          <span class="icone"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg></span>
+          <span class="texto">Painel</span>
+        </a></li>
+        <li><a href="#terceiros" data-secao="terceiros" title="Centros de Terceiros">
+          <span class="icone"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="9" cy="7" r="4"/><path d="M17 11a4 4 0 1 0-4-4"/><path d="M1 21v-2a4 4 0 0 1 4-4h8a4 4 0 0 1 4 4v2"/><path d="M17 21v-2a4 4 0 0 0-3-3.87"/></svg></span>
+          <span class="texto">Centros de Terceiros</span>
+        </a></li>
+        <li><a href="#lancamento" data-secao="lancamento" title="Novo lançamento">
+          <span class="icone"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M12 8v8M8 12h8"/></svg></span>
+          <span class="texto">Novo lançamento</span>
+        </a></li>
+        <li><a href="#ordens-pagamento" data-secao="ordens-pagamento" title="Ordens de pagamento">
+          <span class="icone"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg></span>
+          <span class="texto">Ordens de pagamento</span>
+        </a></li>
+        <li><a href="#orcamento" data-secao="orcamento" title="Orçamento & contas">
+          <span class="icone"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3"/><path d="M1 14h6M9 8h6M17 16h6"/></svg></span>
+          <span class="texto">Orçamento &amp; contas</span>
+        </a></li>
+        <li><a href="#relatorios" data-secao="relatorios" title="Relatórios">
+          <span class="icone"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M14 3v6h6"/><path d="M8 13h8M8 17h8"/></svg></span>
+          <span class="texto">Relatórios</span>
+        </a></li>
       </ul>
 
       <div class="sidebar-usuario">
         <img id="usuario-foto" src="" alt="" style="display:none" />
-        <span id="usuario-nome">—</span>
-        <button id="botao-sair" title="Sair">Sair</button>
+        <span class="texto" id="usuario-nome">—</span>
+        <button class="texto" id="botao-sair" title="Sair">Sair</button>
       </div>
     </aside>
 
@@ -169,52 +192,55 @@
       <section id="secao-ordens-pagamento" class="secao-conteudo" hidden>
         <header><h2>Ordens de Pagamento</h2></header>
 
-        <form id="form-ordem-pagamento" class="cartao-form" style="max-width: 560px; margin-bottom: var(--space-6)">
-          <div class="campo-duplo">
+        <div class="grid-duas-colunas" style="margin-bottom: var(--space-6)">
+          <form id="form-ordem-pagamento" class="cartao-form">
+            <div class="campo-duplo">
+              <div class="campo">
+                <label for="op-numero-solicitacao">Nº da Solicitação</label>
+                <input type="text" id="op-numero-solicitacao" required />
+              </div>
+              <div class="campo">
+                <label for="op-numero-op">Nº da Ordem de Pagamento</label>
+                <input type="text" id="op-numero-op" required />
+              </div>
+            </div>
+
             <div class="campo">
-              <label for="op-numero-solicitacao">Nº da Solicitação</label>
-              <input type="text" id="op-numero-solicitacao" required />
+              <label for="op-centro-custo">Centro de Custo</label>
+              <select id="op-centro-custo" required>
+                <option value="">Carregando...</option>
+              </select>
+            </div>
+
+            <div class="campo">
+              <label for="op-conta-contabil">Conta Contábil</label>
+              <select id="op-conta-contabil" required disabled>
+                <option value="">Selecione a Conta Contábil</option>
+              </select>
+            </div>
+
+            <div class="campo">
+              <label for="op-saldo-total">Saldo Total (R$)</label>
+              <input type="number" id="op-saldo-total" min="0.01" step="0.01" required />
+            </div>
+
+            <button type="submit" class="botao-primario">Registrar Ordem de Pagamento</button>
+            <p id="form-op-status" class="form-status" role="status"></p>
+          </form>
+
+          <aside class="cartao-preview">
+            <h3>Buscar / Filtrar</h3>
+            <div class="campo">
+              <label for="op-busca-texto">Nº OP, Nº Solicitação ou Conta</label>
+              <input type="text" id="op-busca-texto" placeholder="Digite para filtrar..." />
             </div>
             <div class="campo">
-              <label for="op-numero-op">Nº da Ordem de Pagamento</label>
-              <input type="text" id="op-numero-op" required />
+              <label for="op-filtro-centro">Centro de Custo</label>
+              <select id="op-filtro-centro">
+                <option value="">Todos os Centros de Custo</option>
+              </select>
             </div>
-          </div>
-
-          <div class="campo">
-            <label for="op-centro-custo">Centro de Custo</label>
-            <select id="op-centro-custo" required>
-              <option value="">Carregando...</option>
-            </select>
-          </div>
-
-          <div class="campo">
-            <label for="op-conta-contabil">Conta Contábil</label>
-            <select id="op-conta-contabil" required disabled>
-              <option value="">Selecione a Conta Contábil</option>
-            </select>
-          </div>
-
-          <div class="campo">
-            <label for="op-saldo-total">Saldo Total (R$)</label>
-            <input type="number" id="op-saldo-total" min="0.01" step="0.01" required />
-          </div>
-
-          <button type="submit" class="botao-primario">Registrar Ordem de Pagamento</button>
-          <p id="form-op-status" class="form-status" role="status"></p>
-        </form>
-
-        <div class="campo-duplo" style="max-width: 720px; margin-bottom: var(--space-4)">
-          <div class="campo">
-            <label for="op-busca-texto">Buscar (Nº OP, Nº Solicitação, Conta)</label>
-            <input type="text" id="op-busca-texto" placeholder="Digite para filtrar..." />
-          </div>
-          <div class="campo">
-            <label for="op-filtro-centro">Filtrar por Centro de Custo</label>
-            <select id="op-filtro-centro">
-              <option value="">Todos os Centros de Custo</option>
-            </select>
-          </div>
+          </aside>
         </div>
 
         <div id="lista-ordens-pagamento">
@@ -225,31 +251,36 @@
       <section id="secao-orcamento" class="secao-conteudo" hidden>
         <header><h2>Orçamento &amp; Contas</h2></header>
 
-        <form id="form-novo-centro" class="cartao-form" style="max-width: 560px; margin-bottom: var(--space-6)">
-          <h3 style="margin-bottom: var(--space-3)">Novo Centro de Custo</h3>
-          <div class="campo-duplo">
-            <div class="campo">
-              <label for="orc-novo-centro-nome">Nome</label>
-              <input type="text" id="orc-novo-centro-nome" />
+        <div class="grid-duas-colunas" style="margin-bottom: var(--space-6)">
+          <form id="form-novo-centro" class="cartao-form">
+            <h3 style="margin-bottom: var(--space-3)">Novo Centro de Custo</h3>
+            <div class="campo-duplo">
+              <div class="campo">
+                <label for="orc-novo-centro-nome">Nome</label>
+                <input type="text" id="orc-novo-centro-nome" />
+              </div>
+              <div class="campo">
+                <label for="orc-novo-centro-tipo">Gestão</label>
+                <select id="orc-novo-centro-tipo">
+                  <option value="proprio">Próprio</option>
+                  <option value="terceiros">Terceiros</option>
+                </select>
+              </div>
             </div>
-            <div class="campo">
-              <label for="orc-novo-centro-tipo">Gestão</label>
-              <select id="orc-novo-centro-tipo">
-                <option value="proprio">Próprio</option>
-                <option value="terceiros">Terceiros</option>
-              </select>
-            </div>
-          </div>
-          <button type="submit" class="botao-primario">Criar Centro de Custo</button>
-          <p id="orc-status-centro" class="form-status" role="status"></p>
-        </form>
+            <button type="submit" class="botao-primario">Criar Centro de Custo</button>
+            <p id="orc-status-centro" class="form-status" role="status"></p>
+          </form>
 
-        <div class="campo" style="max-width: 400px; margin-bottom: var(--space-4)">
-          <label for="orc-select-centro">Gerenciar Contas de um Centro de Custo</label>
-          <select id="orc-select-centro"><option value="">Carregando...</option></select>
+          <aside class="cartao-preview">
+            <h3>Gerenciar Contas</h3>
+            <div class="campo">
+              <label for="orc-select-centro">Centro de Custo</label>
+              <select id="orc-select-centro"><option value="">Carregando...</option></select>
+            </div>
+            <button type="button" id="orc-botao-nova-conta" class="botao-primario">+ Nova Conta Contábil</button>
+          </aside>
         </div>
 
-        <button type="button" id="orc-botao-nova-conta" class="botao-primario" style="max-width: 220px; margin-bottom: var(--space-4)">+ Nova Conta Contábil</button>
 
         <div id="orc-painel-conta" class="cartao-form" hidden style="margin-bottom: var(--space-6)">
           <h3 id="orc-conta-titulo" style="margin-bottom: var(--space-3)">Nova Conta Contábil</h3>
