@@ -253,11 +253,10 @@
 
         <div id="orc-painel-conta" class="cartao-form" hidden style="margin-bottom: var(--space-6)">
           <h3 id="orc-conta-titulo" style="margin-bottom: var(--space-3)">Nova Conta Contábil</h3>
-          <div class="campo">
-            <label for="orc-conta-catalogo">Usar uma Conta já cadastrada (preenche automaticamente)</label>
-            <select id="orc-conta-catalogo">
-              <option value="">+ Nova (digitar manualmente)</option>
-            </select>
+          <div class="campo" style="position: relative">
+            <label for="orc-conta-busca">Buscar Conta já cadastrada (nome ou código) — ou digite uma nova abaixo</label>
+            <input type="text" id="orc-conta-busca" autocomplete="off" placeholder="Digite para buscar..." />
+            <div id="orc-conta-sugestoes" class="autocomplete-lista" hidden></div>
           </div>
           <div class="campo-duplo">
             <div class="campo">
