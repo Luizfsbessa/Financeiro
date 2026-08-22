@@ -149,6 +149,12 @@ export async function registrarLancamentoComOP(dadosLancamento, ordemPagamentoId
   return lancamentoRef.id;
 }
 
+/** Lista TODOS os lançamentos (usado pelo relatório de Divergências). */
+export async function listarTodosLancamentos() {
+  const snap = await getDocs(collection(db, "lancamentos"));
+  return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+}
+
 // ============================================================
 // Cadastro — Centro de Custo, Conta Contábil, Serviço
 // (usado pela tela "Orçamento & Contas", que substitui a

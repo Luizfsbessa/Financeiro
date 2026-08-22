@@ -15,6 +15,7 @@ import { iniciarFormLancamento } from "./form-lancamento.js";
 import { iniciarDashboard, invalidarDashboard, dashboardJaCarregado, iniciarPainelTerceiros, invalidarPainelTerceiros, painelTerceirosJaCarregado } from "./dashboard.js";
 import { iniciarOrdensPagamento } from "./ordens-pagamento.js";
 import { iniciarOrcamento } from "./orcamento.js";
+import { iniciarRelatorios } from "./relatorios.js";
 
 const telaLogin = document.getElementById("tela-login");
 const appShell = document.getElementById("app-shell");
@@ -62,6 +63,10 @@ function irParaSecao(nomeSecao, user) {
 
   if (nomeSecao === "orcamento") {
     iniciarOrcamento();
+  }
+
+  if (nomeSecao === "relatorios") {
+    iniciarRelatorios();
   }
 }
 
