@@ -231,7 +231,7 @@ function conectarFormularioConta() {
     const inputNome = document.getElementById("orc-conta-nome");
     const inputCodigo = document.getElementById("orc-conta-codigo");
     const status = document.getElementById("orc-status-conta");
-    const botao = form.querySelector('button[type="submit"]');
+    const botao = document.getElementById("orc-conta-salvar");
 
     if (!centroSelecionadoId) {
       status.textContent = "Nenhum Centro de Custo selecionado — selecione um antes de criar a conta.";
@@ -399,7 +399,7 @@ function conectarFormularioServico() {
 
     const inputNome = document.getElementById("orc-servico-nome");
     const status = document.getElementById("orc-status-servico");
-    const botao = form.querySelector('button[type="submit"]');
+    const botao = document.getElementById("orc-servico-salvar");
 
     if (!contaSelecionadaId) {
       status.textContent = "Nenhuma Conta Contábil selecionada — clique em 'Serviços' numa conta antes.";
