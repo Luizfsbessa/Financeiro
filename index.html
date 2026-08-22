@@ -253,14 +253,20 @@
 
         <div id="orc-painel-conta" class="cartao-form" hidden style="margin-bottom: var(--space-6)">
           <h3 id="orc-conta-titulo" style="margin-bottom: var(--space-3)">Nova Conta Contábil</h3>
+          <div class="campo">
+            <label for="orc-conta-catalogo">Usar uma Conta já cadastrada (preenche automaticamente)</label>
+            <select id="orc-conta-catalogo">
+              <option value="">+ Nova (digitar manualmente)</option>
+            </select>
+          </div>
           <div class="campo-duplo">
             <div class="campo">
               <label for="orc-conta-nome">Nome</label>
               <input type="text" id="orc-conta-nome" />
             </div>
             <div class="campo">
-              <label for="orc-conta-codigo">Código (opcional)</label>
-              <input type="text" id="orc-conta-codigo" />
+              <label for="orc-conta-codigo">Código da Conta Contábil (obrigatório)</label>
+              <input type="text" id="orc-conta-codigo" required />
             </div>
           </div>
           <label style="font-size: var(--text-xs); font-weight: 600; text-transform: uppercase; letter-spacing: 0.03em; color: var(--ink-700)">Orçamento Aprovado por mês (R$)</label>
