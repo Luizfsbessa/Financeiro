@@ -12,6 +12,7 @@ import {
   getDocs,
   addDoc,
   doc,
+  updateDoc,
   runTransaction,
   serverTimestamp,
 } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
@@ -146,4 +147,61 @@ export async function registrarLancamentoComOP(dadosLancamento, ordemPagamentoId
   });
 
   return lancamentoRef.id;
+}
+
+// ============================================================
+// Cadastro — Centro de Custo, Conta Contábil, Serviço
+// (usado pela tela "Orçamento & Contas", que substitui a
+// necessidade de cadastrar isso via seed.html/console do Firebase)
+// ============================================================
+
+/** Cria um novo Centro de Custo. tipoGestao: "proprio" | "terceiros". */
+export async function criarCentroCusto({ nome, tipoGestao }) {
+  const ref = await addDoc(collection(db, "centros_custo"), {
+    nome: nome.trim(),
+    tipo_gestao: tipoGestao,
+  });
+  return ref.id;
+}
+
+/** Atualiza campos de um Centro de Custo existente. */
+export async function atualizarCentroCusto(id, dados) {
+  await updateDoc(doc(db, "centros_custo", id), dados);
+}
+
+/**
+ * Cria uma nova Conta Contábil sob um Centro de Custo, com o
+ * Orçamento Aprovado já preenchido (objeto {jan..dez}).
+ */
+export async function criarContaContabil({ nome, contaCodigo, centroCustoId, orcamentoAprovado }) {
+  const ref = await addDoc(collection(db, "contas_contabeis"), {
+    nome: nome.trim(),
+    conta_codigo: contaCodigo?.trim() || null,
+    centro_custo_id: centroCustoId,
+    orcamento_aprovado: orcamentoAprovado,
+  });
+  return ref.id;
+}
+
+/** Atualiza nome/código/orçamento aprovado de uma Conta Contábil existente. */
+export async function atualizarContaContabil(id, dados) {
+  await updateDoc(doc(db, "contas_contabeis", id), dados);
+}
+
+/**
+ * Cria um novo Serviço/Prestador sob uma Conta Contábil, com o
+ * Orçamento Projetado já preenchido (objeto {jan..dez}).
+ */
+export async function criarServico({ nome, contaContabilId, orcamentoProjetado }) {
+  const ref = await addDoc(collection(db, "servicos"), {
+    nome: nome.trim(),
+    conta_contabil_id: contaContabilId,
+    orcamento_projetado: orcamentoProjetado,
+  });
+  return ref.id;
+}
+
+/** Atualiza nome/orçamento projetado de um Serviço existente. */
+export async function atualizarServico(id, dados) {
+  await updateDoc(doc(db, "servicos", id), dados);
 }
