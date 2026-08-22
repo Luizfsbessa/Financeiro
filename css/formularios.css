@@ -2,7 +2,8 @@
    FORMULÁRIOS — Tela de lançamento e componentes de status
    ============================================================ */
 
-.grid-lancamento {
+.grid-lancamento,
+.grid-duas-colunas {
   display: grid;
   grid-template-columns: 1fr 340px;
   gap: var(--space-6);
@@ -10,7 +11,8 @@
 }
 
 @media (max-width: 860px) {
-  .grid-lancamento { grid-template-columns: 1fr; }
+  .grid-lancamento,
+  .grid-duas-colunas { grid-template-columns: 1fr; }
 }
 
 .cartao-form,

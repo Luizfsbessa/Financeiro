@@ -85,8 +85,10 @@
   display: none; /* ativado via JS após autenticação */
   min-height: 100vh;
   grid-template-columns: 240px 1fr;
+  transition: grid-template-columns 0.18s ease;
 }
 #app-shell.ativo { display: grid; }
+#app-shell.sidebar-colapsada { grid-template-columns: 64px 1fr; }
 
 .sidebar {
   background: var(--brand-900);
@@ -94,13 +96,39 @@
   padding: var(--space-6) var(--space-4);
   display: flex;
   flex-direction: column;
+  overflow: hidden;
 }
+
+.sidebar-topo {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-8);
+}
+
+.sidebar-toggle {
+  background: none;
+  border: none;
+  color: rgba(246, 245, 241, 0.6);
+  padding: var(--space-1);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  display: flex;
+  flex-shrink: 0;
+  transition: background 0.15s ease, color 0.15s ease, transform 0.18s ease;
+}
+.sidebar-toggle:hover { background: var(--brand-700); color: var(--paper-0); }
+.sidebar-toggle svg { width: 18px; height: 18px; }
+
+#app-shell.sidebar-colapsada .sidebar-topo { justify-content: center; }
+#app-shell.sidebar-colapsada .sidebar-marca { display: none; }
+#app-shell.sidebar-colapsada .sidebar-toggle svg { transform: rotate(180deg); }
 
 .sidebar-marca {
   font-family: var(--font-display);
   font-size: var(--text-lg);
   color: var(--paper-0);
-  margin-bottom: var(--space-8);
+  white-space: nowrap;
 }
 
 .sidebar-nav {
@@ -115,13 +143,16 @@
 }
 
 .sidebar-nav a {
-  display: block;
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
   padding: var(--space-2) var(--space-3);
   border-radius: var(--radius-sm);
   color: rgba(246, 245, 241, 0.75);
   font-size: var(--text-sm);
   font-weight: 500;
   text-decoration: none;
+  white-space: nowrap;
   transition: background 0.15s ease, color 0.15s ease;
 }
 .sidebar-nav a:hover,
@@ -129,6 +160,18 @@
   background: var(--brand-700);
   color: var(--paper-0);
 }
+
+.sidebar-nav .icone {
+  display: flex;
+  flex-shrink: 0;
+}
+.sidebar-nav .icone svg { width: 18px; height: 18px; }
+
+#app-shell.sidebar-colapsada .sidebar-nav a { justify-content: center; padding: var(--space-2); }
+#app-shell.sidebar-colapsada .sidebar-nav .texto,
+#app-shell.sidebar-colapsada .sidebar-usuario .texto { display: none; }
+#app-shell.sidebar-colapsada .sidebar-usuario { justify-content: center; }
+#app-shell.sidebar-colapsada .sidebar-usuario img { margin: 0 auto; }
 
 .sidebar-usuario {
   border-top: 1px solid rgba(246, 245, 241, 0.15);

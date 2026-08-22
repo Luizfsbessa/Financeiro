@@ -56,6 +56,12 @@
   text-align: left;
   padding: var(--space-2) var(--space-3);
 }
+.centro-codigo {
+  font-family: var(--font-ledger);
+  font-weight: 400;
+  opacity: 0.65;
+  font-size: var(--text-xs);
+}
 
 .tabela-matriz tbody tr:not(.linha-centro):hover td {
   background: var(--paper-0);
@@ -69,6 +75,14 @@
 .heat-amarelo { background: var(--status-alerta-bg); color: var(--status-alerta-fg); }
 .heat-vermelho { background: var(--status-divergencia-bg); color: var(--status-divergencia-fg); }
 .heat-sem-dados { color: var(--ink-400); font-weight: 400; }
+
+/* Variantes de texto (sem fundo) para a linha de subtotal do Centro de
+   Custo, que já tem fundo escuro — cores claras o suficiente pra contrastar.
+   Especificidade reforçada (.linha-centro .heat-centro-*) pra vencer a cor
+   branca padrão que .linha-centro td aplica a todas as células. */
+.linha-centro .heat-centro-verde { color: #8FD9A8; font-weight: 700; }
+.linha-centro .heat-centro-amarelo { color: #F0C674; font-weight: 700; }
+.linha-centro .heat-centro-vermelho { color: #F2A3A3; font-weight: 700; }
 
 .legenda-heatmap {
   display: flex;
