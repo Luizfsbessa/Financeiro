@@ -108,22 +108,53 @@ function classificarIndex(indexPct) {
   return "heat-vermelho";
 }
 
+/** Variante para texto sobre fundo escuro (linha de subtotal do Centro de Custo). */
+function classificarIndexCentro(indexPct) {
+  if (indexPct <= 95) return "heat-centro-verde";
+  if (indexPct <= 100) return "heat-centro-amarelo";
+  return "heat-centro-vermelho";
+}
+
 function renderizarTabela(container, centros, linhas) {
-  const gruposPorCentro = centros.map((centro) => ({
-    centro,
-    contasDoGrupo: linhas.filter((l) => l.conta?.centro_custo_id === centro.id),
-  }));
-  // Nota: centros sem nenhuma Conta Contábil ainda aparecem (com uma linha
-  // avisando que estão vazios) — antes eram escondidos por completo, o que
-  // fazia parecer que um Centro recém-criado "sumia" do Painel.
+  const gruposPorCentro = centros
+    .map((centro) => {
+      const contasDoGrupo = linhas.filter((l) => l.conta?.centro_custo_id === centro.id);
+
+      const somaRealizadoPorMes = Array(12).fill(0);
+      let somaRealizado = 0;
+      let somaAprovado = 0;
+
+      contasDoGrupo.forEach(({ conta, realizadoPorMes }) => {
+        realizadoPorMes.forEach((valor, i) => (somaRealizadoPorMes[i] += valor));
+        somaRealizado += realizadoPorMes.reduce((a, b) => a + b, 0);
+        somaAprovado += CHAVES_MES.reduce((acc, chave) => acc + (conta.orcamento_aprovado?.[chave] ?? 0), 0);
+      });
+
+      return { centro, contasDoGrupo, somaRealizadoPorMes, somaRealizado, somaAprovado };
+    })
+    // Prioriza quem tem mais orçamento em jogo — "big numbers" primeiro.
+    .sort((a, b) => b.somaAprovado - a.somaAprovado);
 
   const cabecalhoMeses = NOMES_MES_ABREV.map((m) => `<th class="col-mes">${m}</th>`).join("");
 
   const corpo = gruposPorCentro
-    .map(({ centro, contasDoGrupo }) => {
+    .map(({ centro, contasDoGrupo, somaRealizadoPorMes, somaRealizado, somaAprovado }) => {
+      const variacaoCentro = somaAprovado - somaRealizado;
+      const indexCentro = somaAprovado > 0 ? (somaRealizado / somaAprovado) * 100 : 0;
+      const classeHeatCentro = somaAprovado > 0 ? classificarIndexCentro(indexCentro) : "";
+
+      const celulasMesesCentro = somaRealizadoPorMes
+        .map((valor) => `<td class="col-mes numero-tabular">${valor > 0 ? formatadorRS.format(valor) : "—"}</td>`)
+        .join("");
+
       const linhaCentro = `
         <tr class="linha-centro">
-          <td colspan="${5 + 12}">${centro.nome}${centro.codigo_centro ? ` <span class="centro-codigo">— ${centro.codigo_centro}</span>` : ""}</td>
+          <td class="col-conta">${centro.nome}${centro.codigo_centro ? ` <span class="centro-codigo">— ${centro.codigo_centro}</span>` : ""}</td>
+          ${celulasMesesCentro}
+          <td class="numero-tabular">${formatadorRS.format(somaRealizado)}</td>
+          <td class="numero-tabular">${somaAprovado > 0 ? formatadorRS.format(somaAprovado) : "—"}</td>
+          <td class="numero-tabular">${formatadorRS.format(variacaoCentro)}</td>
+          <td class="numero-tabular ${classeHeatCentro}">${somaAprovado > 0 ? indexCentro.toFixed(1) + "%" : "—"}</td>
         </tr>`;
 
       const linhasConta = contasDoGrupo.length === 0

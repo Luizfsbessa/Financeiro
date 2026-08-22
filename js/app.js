@@ -25,6 +25,19 @@ const loginErro = document.getElementById("login-erro");
 const usuarioNomeEl = document.getElementById("usuario-nome");
 const usuarioFotoEl = document.getElementById("usuario-foto");
 const linksNav = document.querySelectorAll("#sidebar-nav a");
+const botaoSidebarToggle = document.getElementById("sidebar-toggle");
+
+// --- Sidebar retrátil (lembra a preferência entre sessões) ---
+const CHAVE_SIDEBAR = "bills-sidebar-colapsada";
+if (localStorage.getItem(CHAVE_SIDEBAR) === "true") {
+  appShell.classList.add("sidebar-colapsada");
+  if (botaoSidebarToggle) botaoSidebarToggle.title = "Expandir menu";
+}
+botaoSidebarToggle?.addEventListener("click", () => {
+  const colapsada = appShell.classList.toggle("sidebar-colapsada");
+  localStorage.setItem(CHAVE_SIDEBAR, String(colapsada));
+  botaoSidebarToggle.title = colapsada ? "Expandir menu" : "Recolher menu";
+});
 
 let formLancamentoIniciado = false;
 let usuarioAtual = null;
