@@ -177,3 +177,40 @@
   padding: 0;
 }
 .botao-link:hover { text-decoration: underline; }
+
+.autocomplete-lista {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  z-index: 20;
+  background: var(--paper-1);
+  border: 1px solid var(--line-100);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-card);
+  max-height: 240px;
+  overflow-y: auto;
+  margin-top: 2px;
+}
+
+.autocomplete-item {
+  padding: var(--space-2) var(--space-3);
+  font-size: var(--text-sm);
+  cursor: pointer;
+  border-bottom: 1px solid var(--line-100);
+}
+.autocomplete-item:last-child { border-bottom: none; }
+.autocomplete-item:hover,
+.autocomplete-item.ativo { background: var(--brass-100); }
+
+.autocomplete-item .codigo {
+  font-family: var(--font-ledger);
+  color: var(--brass-500);
+  margin-right: var(--space-2);
+}
+
+.autocomplete-vazio {
+  padding: var(--space-2) var(--space-3);
+  font-size: var(--text-xs);
+  color: var(--ink-400);
+}
