@@ -240,3 +240,41 @@
   font-size: var(--text-xs);
   color: var(--ink-400);
 }
+
+/* --- Rateio de NF entre Centros de Custo --- */
+.rat-linha {
+  display: grid;
+  grid-template-columns: 1.4fr 0.8fr 1fr 1.3fr auto;
+  gap: var(--space-3);
+  align-items: end;
+  padding: var(--space-3) 0;
+  border-bottom: 1px solid var(--line-100);
+}
+.rat-linha .campo { margin-bottom: 0; }
+.rat-linha label { font-size: var(--text-xs); color: var(--ink-400); text-transform: none; font-weight: 500; }
+.rat-linha select,
+.rat-linha input {
+  padding: var(--space-2);
+  border: 1px solid var(--line-100);
+  border-radius: var(--radius-sm);
+  background: var(--paper-0);
+  font-size: var(--text-sm);
+  width: 100%;
+}
+.rat-linha-valor { font-family: var(--font-ledger); font-variant-numeric: tabular-nums; background: var(--paper-1) !important; }
+.rat-linha-remover {
+  color: var(--status-divergencia-fg);
+  height: fit-content;
+  padding: var(--space-2) 0;
+}
+.rat-linha-aviso {
+  grid-column: 1 / -1;
+  color: var(--status-divergencia-fg);
+  font-size: var(--text-xs);
+  margin: 0;
+}
+.rat-linha-aviso:empty { display: none; }
+
+@media (max-width: 900px) {
+  .rat-linha { grid-template-columns: 1fr; }
+}
