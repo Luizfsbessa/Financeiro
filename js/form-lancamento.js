@@ -59,7 +59,7 @@ export async function iniciarFormLancamento(user) {
     ordemPagamentoSelecionada = null;
     limparSelect(selConta, "Selecione a Conta Contábil");
     limparSelect(selServico, "Selecione o Serviço/Prestador");
-    limparSelect(selOP, "Selecione a Conta Contábil primeiro");
+    limparSelect(selOP, "Selecione o Serviço/Prestador primeiro");
     atualizarPreview(null);
     if (!selCentro.value) return;
     const contas = await listarContasPorCentro(selCentro.value);
@@ -70,23 +70,32 @@ export async function iniciarFormLancamento(user) {
     servicoSelecionado = null;
     ordemPagamentoSelecionada = null;
     limparSelect(selServico, "Selecione o Serviço/Prestador");
-    limparSelect(selOP, "Selecione a Ordem de Pagamento");
+    limparSelect(selOP, "Selecione o Serviço/Prestador primeiro");
     atualizarPreview(null);
     if (!selConta.value) return;
-    const [servicos, ordensPagamento] = await Promise.all([
-      listarServicosPorConta(selConta.value),
-      listarOrdensPagamentoPorConta(selConta.value),
-    ]);
+    const servicos = await listarServicosPorConta(selConta.value);
     preencherSelect(selServico, servicos, "Selecione o Serviço/Prestador");
-    preencherSelectOP(selOP, ordensPagamento);
   });
 
   selOP.addEventListener("change", () => {
     ordemPagamentoSelecionada = obterDadosSelecionados(selOP);
   });
 
-  selServico.addEventListener("change", () => {
+  selServico.addEventListener("change", async () => {
     servicoSelecionado = obterDadosSelecionados(selServico);
+    ordemPagamentoSelecionada = null;
+    limparSelect(selOP, "Carregando Ordens de Pagamento...");
+
+    if (selServico.value && selConta.value) {
+      const todasOPs = await listarOrdensPagamentoPorConta(selConta.value);
+      // Uma OP só é elegível pra este lançamento se estiver presa a ESTE
+      // Serviço/Fornecedor específico. OPs sem servico_id são dados
+      // antigos (importados antes dessa trava existir) — continuam
+      // aparecendo, mas isso é uma exceção histórica, não a regra.
+      const elegiveis = todasOPs.filter((op) => !op.servico_id || op.servico_id === selServico.value);
+      preencherSelectOP(selOP, elegiveis);
+    }
+
     recalcularPreview();
   });
 
@@ -243,7 +252,7 @@ export async function iniciarFormLancamento(user) {
       ordemPagamentoSelecionada = null;
       limparSelect(selConta, "Selecione a Conta Contábil");
       limparSelect(selServico, "Selecione o Serviço/Prestador");
-      limparSelect(selOP, "Selecione a Conta Contábil primeiro");
+      limparSelect(selOP, "Selecione o Serviço/Prestador primeiro");
       atualizarPreview(null);
       invalidarDashboard();
       invalidarPainelTerceiros();
