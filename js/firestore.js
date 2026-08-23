@@ -183,15 +183,20 @@ export async function criarOrdemPagamentoRateio({ numeroSolicitacao, numeroOP, c
   return ref.id;
 }
 
-/** Lista Ordens de Pagamento do tipo "rateio" vinculadas a um código de Conta Contábil. */
+/**
+ * Lista Ordens de Pagamento do tipo "rateio" vinculadas a um código de
+ * Conta Contábil. Busca por um único filtro de igualdade (tipo == "rateio",
+ * sempre coberto por índice automático do Firestore, sem risco de precisar
+ * de índice composto) e filtra o código no cliente — também blinda contra
+ * espaço em branco ou diferença de maiúscula/minúscula na comparação.
+ */
 export async function listarOrdensPagamentoRateioPorCodigo(contaCodigo) {
-  const q = query(
-    collection(db, "ordens_pagamento"),
-    where("tipo", "==", "rateio"),
-    where("conta_codigo", "==", contaCodigo)
-  );
+  const alvo = String(contaCodigo).trim().toLowerCase();
+  const q = query(collection(db, "ordens_pagamento"), where("tipo", "==", "rateio"));
   const snap = await getDocs(q);
-  return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+  const todas = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+  console.log(`[firestore] OPs de rateio no total: ${todas.length}`, todas.map((o) => o.conta_codigo));
+  return todas.filter((op) => String(op.conta_codigo ?? "").trim().toLowerCase() === alvo);
 }
 
 /**

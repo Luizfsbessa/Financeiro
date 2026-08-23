@@ -114,6 +114,7 @@ async function carregarOPsRateio(codigo) {
   const selOP = document.getElementById("rat-ordem-pagamento");
   selOP.innerHTML = '<option value="">Carregando...</option>';
   selOP.disabled = true;
+  console.log(`[rateio] buscando OPs de rateio para o código: "${codigo}"`);
 
   try {
     opsCarregadas = await listarOrdensPagamentoRateioPorCodigo(codigo);
@@ -156,8 +157,8 @@ async function adicionarLinha() {
       <select class="rat-linha-centro"><option value="">Carregando...</option></select>
     </div>
     <div class="campo">
-      <label>Fração (4 casas)</label>
-      <input type="number" class="rat-linha-fracao" step="0.0001" min="0" max="1" value="0" />
+      <label>Percentual (%) — 4 casas</label>
+      <input type="number" class="rat-linha-fracao" step="0.0001" min="0" max="100" value="0" placeholder="Ex.: 33.3333" />
     </div>
     <div class="campo">
       <label>Valor</label>
@@ -231,19 +232,19 @@ function recalcularTotais() {
   const valorTotal = parseFloat(document.getElementById("rat-valor-total").value) || 0;
   const linhas = document.querySelectorAll(".rat-linha");
 
-  let somaFracoes = 0;
+  let somaPercentuais = 0;
   linhas.forEach((div) => {
-    const fracao = parseFloat(div.querySelector(".rat-linha-fracao").value) || 0;
-    somaFracoes += fracao;
-    const valorLinha = fracao * valorTotal;
+    const percentual = parseFloat(div.querySelector(".rat-linha-fracao").value) || 0;
+    somaPercentuais += percentual;
+    const valorLinha = (percentual / 100) * valorTotal;
     div.querySelector(".rat-linha-valor").value = formatadorRS.format(valorLinha);
   });
 
-  document.getElementById("rat-soma-fracoes").textContent = somaFracoes.toFixed(4).replace(".", ",");
-  document.getElementById("rat-soma-valores").textContent = formatadorRS.format(somaFracoes * valorTotal);
+  document.getElementById("rat-soma-fracoes").textContent = somaPercentuais.toFixed(4).replace(".", ",") + "%";
+  document.getElementById("rat-soma-valores").textContent = formatadorRS.format((somaPercentuais / 100) * valorTotal);
 
   const elSoma = document.getElementById("rat-soma-fracoes");
-  const dentroTolerancia = Math.abs(somaFracoes - 1) < 0.0005;
+  const dentroTolerancia = Math.abs(somaPercentuais - 100) < 0.05;
   elSoma.style.color = linhas.length > 0 && !dentroTolerancia ? "var(--status-divergencia-fg)" : "var(--status-ok-fg)";
 }
 
@@ -282,9 +283,9 @@ async function salvarRateio() {
     return;
   }
 
-  const somaFracoes = linhasEl.reduce((acc, div) => acc + (parseFloat(div.querySelector(".rat-linha-fracao").value) || 0), 0);
-  if (Math.abs(somaFracoes - 1) >= 0.0005) {
-    status.textContent = `A soma das frações precisa fechar em 1,0000 (está em ${somaFracoes.toFixed(4)}).`;
+  const somaPercentuais = linhasEl.reduce((acc, div) => acc + (parseFloat(div.querySelector(".rat-linha-fracao").value) || 0), 0);
+  if (Math.abs(somaPercentuais - 100) >= 0.05) {
+    status.textContent = `A soma dos percentuais precisa fechar em 100,0000% (está em ${somaPercentuais.toFixed(4)}%).`;
     return;
   }
 
@@ -306,7 +307,7 @@ async function salvarRateio() {
 
     // Arredonda cada fatia em 2 casas, e ajusta a ÚLTIMA linha pra absorver
     // a sobra do arredondamento — garante que a soma bate exatamente com o
-    // Valor Total da NF, mesmo com frações tipo 0,3333/0,3333/0,3334.
+    // Valor Total da NF, mesmo com percentuais tipo 33,3333/33,3333/33,3334.
     let somaParcial = 0;
     const linhasParaGravar = linhasEl.map((div, indice) => {
       const centroId = div.querySelector(".rat-linha-centro").value;
@@ -314,9 +315,9 @@ async function salvarRateio() {
       const selServico = div.querySelector(".rat-linha-servico");
       const servicoId = selServico.value;
       const servicoObj = JSON.parse(selServico.options[selServico.selectedIndex].dataset.item);
-      const fracao = parseFloat(div.querySelector(".rat-linha-fracao").value) || 0;
+      const percentual = parseFloat(div.querySelector(".rat-linha-fracao").value) || 0;
 
-      let valorLinha = Math.round(fracao * valorTotal * 100) / 100;
+      let valorLinha = Math.round((percentual / 100) * valorTotal * 100) / 100;
       if (indice === linhasEl.length - 1) {
         valorLinha = Math.round((valorTotal - somaParcial) * 100) / 100;
       }
@@ -340,11 +341,11 @@ async function salvarRateio() {
         servico_nome: servicoObj.nome,
         tipo_lancamento: "rateio",
         nf_numero: nfNumero,
-        fracao_rateio: fracao,
+        percentual_rateio: percentual,
         valor_nf: valorLinha,
         data_emissao: dataEmissao,
         data_vencimento: dataVencimento,
-        observacao: `Rateio da NF ${nfNumero || "—"} (${(fracao * 100).toFixed(2)}% do total ${formatadorRS.format(valorTotal)}).`,
+        observacao: `Rateio da NF ${nfNumero || "—"} (${percentual.toFixed(4)}% do total ${formatadorRS.format(valorTotal)}).`,
         ...calculado,
       };
     });
