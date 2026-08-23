@@ -11,6 +11,7 @@
 // ============================================================
 
 import { entrarComGoogle, sair, observarAutenticacao, dadosDoLancador } from "./auth.js";
+import { listarCentrosCusto, listarTodasContas } from "./firestore.js";
 import { iniciarFormLancamento } from "./form-lancamento.js";
 import { iniciarRateio } from "./rateio.js";
 import { iniciarDashboard, invalidarDashboard, dashboardJaCarregado, iniciarPainelTerceiros, invalidarPainelTerceiros, painelTerceirosJaCarregado } from "./dashboard.js";
@@ -148,3 +149,36 @@ if ("serviceWorker" in navigator) {
     });
   });
 }
+
+// --- Ferramenta de diagnóstico, chamável direto do console (F12) ---
+// Digite: diagnosticarCentros()
+// Lista todos os Centros de Custo, agrupa por nome e aponta duplicados —
+// útil quando um Centro "some" numa tela mas aparece em outra, sinal
+// clássico de dois documentos diferentes com o mesmo nome.
+window.diagnosticarCentros = async () => {
+  const [centros, contas] = await Promise.all([listarCentrosCusto(), listarTodasContas()]);
+  const porNome = new Map();
+  centros.forEach((c) => {
+    const chave = c.nome.trim().toLowerCase();
+    if (!porNome.has(chave)) porNome.set(chave, []);
+    porNome.get(chave).push(c);
+  });
+
+  console.log(`Total de Centros de Custo: ${centros.length}`);
+  const duplicados = [...porNome.entries()].filter(([, lista]) => lista.length > 1);
+
+  if (duplicados.length === 0) {
+    console.log("Nenhum nome duplicado encontrado.");
+  } else {
+    console.warn(`${duplicados.length} nome(s) de Centro duplicado(s) encontrado(s):`);
+    duplicados.forEach(([nome, lista]) => {
+      console.group(`"${lista[0].nome}" (${lista.length} documentos)`);
+      lista.forEach((c) => {
+        const contasDesse = contas.filter((conta) => conta.centro_custo_id === c.id);
+        console.log(`ID: ${c.id} | tipo_gestao: ${c.tipo_gestao} | ${contasDesse.length} conta(s): ${contasDesse.map((cc) => cc.nome).join(", ") || "(nenhuma)"}`);
+      });
+      console.groupEnd();
+    });
+  }
+  return { centros, duplicados };
+};
