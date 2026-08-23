@@ -81,14 +81,8 @@ async function conectarFormulario() {
     limparSelect(selConta, "Selecione a Conta Contábil");
     limparSelect(selServicoOP, "Selecione a Conta Contábil primeiro");
     if (!selCentro.value) return;
-    console.log(`[ordens-pagamento] Centro selecionado: id="${selCentro.value}" nome="${selCentro.options[selCentro.selectedIndex].textContent}"`);
     const contas = await listarContasPorCentro(selCentro.value);
-    console.log(`[ordens-pagamento] Contas encontradas para esse Centro: ${contas.length}`, contas.map((c) => c.nome));
     preencherSelect(selConta, contas, "Selecione a Conta Contábil");
-    console.log(
-      `[ordens-pagamento] Após preencher — disabled=${selConta.disabled}, options=${selConta.options.length}, mesmo-elemento-do-DOM=${document.getElementById("op-conta-contabil") === selConta}`,
-      [...selConta.options].map((o) => o.textContent)
-    );
   });
 
   selConta.addEventListener("change", async () => {
@@ -322,6 +316,7 @@ function preencherSelect(select, itens, placeholder) {
     option.textContent = item.nome;
     select.appendChild(option);
   });
+  select.disabled = itens.length === 0;
 }
 
 function limparSelect(select, placeholder) {
