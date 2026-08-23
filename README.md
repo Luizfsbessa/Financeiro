@@ -157,7 +157,7 @@ Em "Novo Lançamento", uma segunda aba **"Rateio entre Centros de Custo"** apare
 1. Digite o **código da Conta Contábil** (autocomplete busca entre as já cadastradas) — esse código é o mesmo em todas as fatias.
 2. Escolha a **Ordem de Pagamento de rateio** vinculada a esse código (uma OP só, cobrindo o valor total).
 3. Informe NF, Valor Total, datas.
-4. Adicione uma linha por Centro de Custo, com a **fração** (4 casas decimais). O valor de cada fatia é calculado automaticamente (fração × valor total). A soma das frações precisa fechar em 1,0000.
+4. Adicione uma linha por Centro de Custo, com o **percentual** (4 casas decimais — digite `33.3333` para 33,3333%, não `0.3333`). O valor de cada fatia é calculado automaticamente (percentual/100 × valor total). A soma dos percentuais precisa fechar em 100,0000%.
 5. Salvar cria **um lançamento por Centro de Custo** (cada um com sua própria checagem de divergência/antecedência), mas debita o saldo da OP **uma única vez**, pela soma de tudo — tudo numa transação atômica (`registrarLancamentoRateado` em `firestore.js`).
 
 **Mudança de modelo importante:** Ordens de Pagamento agora podem ser do **tipo "rateio"** — não presas a um Centro de Custo específico, só ao código da Conta Contábil. Isso é uma opção nova no formulário de "Ordens de pagamento" (checkbox "Esta OP é para rateio"), sem afetar OPs normais existentes.
@@ -165,6 +165,12 @@ Em "Novo Lançamento", uma segunda aba **"Rateio entre Centros de Custo"** apare
 **Arredondamento:** cada fatia é arredondada em 2 casas, e a **última linha absorve a sobra** do arredondamento — garante que a soma bate exatamente com o Valor Total da NF, mesmo com frações tipo 0,3333/0,3333/0,3334.
 
 **Não incluído nesta versão:** importação de CSV para preencher as linhas do rateio automaticamente (hoje é manual, linha por linha) — dá pra adicionar depois se fizer falta.
+
+## Ordem de Pagamento presa ao Serviço/Fornecedor
+
+Uma OP normal agora fica presa não só ao Centro de Custo + Conta Contábil, mas também a um **Serviço/Fornecedor específico** (campo `servico_id`) — uma OP aberta para pagar o Senior (Manutenção de Software) não pode ser usada pra pagar Telefonia, nem pra pagar outro fornecedor dentro da mesma Conta Contábil. Em "Ordens de pagamento", o formulário normal agora exige escolher o Serviço depois da Conta. Em "Novo Lançamento", a lista de OPs elegíveis só aparece depois que Serviço é escolhido (antes era só depois da Conta), e filtra pra mostrar só OPs daquele fornecedor específico.
+
+**Compatibilidade com dados antigos:** as OPs importadas antes dessa trava existir não têm `servico_id` — continuam aparecendo como elegíveis pra qualquer Serviço daquela Conta (tratadas como exceção histórica, não a regra daqui pra frente).
 
 ## Próximos módulos (ainda não construídos)
 
