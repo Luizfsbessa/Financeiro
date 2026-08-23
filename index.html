@@ -115,6 +115,12 @@
       <section id="secao-lancamento" class="secao-conteudo" hidden>
         <header><h2>Novo Lançamento</h2></header>
 
+        <div class="relatorio-abas">
+          <button type="button" class="botao-relatorio ativo" data-modo-lancamento="unico">Lançamento único</button>
+          <button type="button" class="botao-relatorio" data-modo-lancamento="rateio">Rateio entre Centros de Custo</button>
+        </div>
+
+        <div id="lancamento-modo-unico">
         <div class="grid-lancamento">
           <form id="form-lancamento" class="cartao-form">
             <div class="campo">
@@ -186,6 +192,70 @@
             </div>
           </aside>
         </div>
+        </div>
+
+        <div id="lancamento-modo-rateio" hidden>
+          <div class="cartao-form" style="margin-bottom: var(--space-6)">
+            <p style="color: var(--ink-400); font-size: var(--text-sm); margin-bottom: var(--space-4)">
+              Use quando uma única NF/OP precisa ser dividida entre vários Centros de Custo (ex.: telefonia rateada entre filiais). A Conta Contábil é a mesma em todas as fatias — só o Centro de Custo e o valor mudam.
+            </p>
+
+            <div class="campo-duplo">
+              <div class="campo" style="position: relative">
+                <label for="rat-conta-codigo">Código da Conta Contábil (mesmo em todas as fatias)</label>
+                <input type="text" id="rat-conta-codigo" autocomplete="off" placeholder="Ex.: 3200001" />
+                <div id="rat-conta-sugestoes" class="autocomplete-lista" hidden></div>
+              </div>
+              <div class="campo">
+                <label for="rat-ordem-pagamento">Ordem de Pagamento (rateio)</label>
+                <select id="rat-ordem-pagamento" disabled>
+                  <option value="">Informe o código da conta primeiro</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="campo-duplo">
+              <div class="campo">
+                <label for="rat-nf-numero">Número da NF</label>
+                <input type="text" id="rat-nf-numero" />
+              </div>
+              <div class="campo">
+                <label for="rat-valor-total">Valor Total da NF (R$)</label>
+                <input type="number" id="rat-valor-total" min="0.01" step="0.01" />
+              </div>
+            </div>
+
+            <div class="campo-duplo">
+              <div class="campo">
+                <label for="rat-data-emissao">Data de Emissão</label>
+                <input type="date" id="rat-data-emissao" />
+              </div>
+              <div class="campo">
+                <label for="rat-data-vencimento">Data de Vencimento</label>
+                <input type="date" id="rat-data-vencimento" />
+              </div>
+            </div>
+
+            <div style="display: flex; justify-content: space-between; align-items: center; margin: var(--space-4) 0 var(--space-2)">
+              <label style="font-size: var(--text-xs); font-weight: 600; text-transform: uppercase; letter-spacing: 0.03em; color: var(--ink-700)">Fatias do rateio</label>
+              <button type="button" id="rat-botao-add-linha" class="botao-link">+ Adicionar Centro de Custo</button>
+            </div>
+
+            <div id="rat-linhas"></div>
+
+            <div class="preview-linha">
+              <span>Soma das frações (deve fechar em 1,0000)</span>
+              <strong class="numero-tabular" id="rat-soma-fracoes">0,0000</strong>
+            </div>
+            <div class="preview-linha">
+              <span>Soma dos valores</span>
+              <strong class="numero-tabular" id="rat-soma-valores">R$ 0,00</strong>
+            </div>
+
+            <button type="button" id="rat-botao-salvar" class="botao-primario" style="margin-top: var(--space-4)">Salvar Rateio</button>
+            <p id="rat-status" class="form-status" role="status"></p>
+          </div>
+        </div>
       </section>
 
       <!-- ===== Aba: Ordens de Pagamento ===== -->
@@ -206,17 +276,33 @@
             </div>
 
             <div class="campo">
-              <label for="op-centro-custo">Centro de Custo</label>
-              <select id="op-centro-custo" required>
-                <option value="">Carregando...</option>
-              </select>
+              <label style="display: flex; align-items: center; gap: var(--space-2); font-weight: 500; text-transform: none; letter-spacing: normal">
+                <input type="checkbox" id="op-eh-rateio" style="width: auto" />
+                Esta OP é para rateio (cobre um pagamento dividido entre vários Centros de Custo)
+              </label>
             </div>
 
-            <div class="campo">
-              <label for="op-conta-contabil">Conta Contábil</label>
-              <select id="op-conta-contabil" required disabled>
-                <option value="">Selecione a Conta Contábil</option>
-              </select>
+            <div id="op-grupo-normal">
+              <div class="campo">
+                <label for="op-centro-custo">Centro de Custo</label>
+                <select id="op-centro-custo" required>
+                  <option value="">Carregando...</option>
+                </select>
+              </div>
+
+              <div class="campo">
+                <label for="op-conta-contabil">Conta Contábil</label>
+                <select id="op-conta-contabil" required disabled>
+                  <option value="">Selecione a Conta Contábil</option>
+                </select>
+              </div>
+            </div>
+
+            <div id="op-grupo-rateio" hidden>
+              <div class="campo">
+                <label for="op-conta-codigo-rateio">Código da Conta Contábil (mesmo em todas as fatias do rateio)</label>
+                <input type="text" id="op-conta-codigo-rateio" autocomplete="off" placeholder="Ex.: 3200001" />
+              </div>
             </div>
 
             <div class="campo">

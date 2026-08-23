@@ -77,6 +77,7 @@ vitale-conciliacao/
 │   ├── firestore.js         → leitura de cadastros + gravação de lançamentos
 │   ├── conciliacao.js       → motor de regras (divergência, antecedência, pagamento)
 │   ├── form-lancamento.js   → tela de lançamento com preview em tempo real
+│   ├── rateio.js             → rateio de NF entre múltiplos Centros de Custo
 │   ├── dashboard.js          → tabela matriz + heatmap
 │   ├── ordens-pagamento.js   → cadastro de OPs e consumo de saldo por lançamento
 │   ├── orcamento.js          → cadastro de Centro de Custo, Conta Contábil e Serviço
@@ -147,6 +148,23 @@ Quatro relatórios prontos, cada um exportável em **Excel (.xlsx)** e **PDF** p
 A exportação usa duas bibliotecas carregadas via CDN **sob demanda** (só quando você entra na aba Relatórios, não pesa o carregamento inicial do app): [SheetJS](https://cdnjs.cloudflare.com/ajax/libs/xlsx) pro Excel e [jsPDF + autoTable](https://cdnjs.cloudflare.com/ajax/libs/jspdf) pro PDF. Isso significa que gerar relatório **exige internet** no momento do clique (além da conexão com o Firebase, que já era necessária).
 
 Todo relatório novo só precisa de uma função que retorne `{ titulo, arquivo, colunas, linhas }` — `exportadores.js` (Excel/PDF) e a renderização em tela já são genéricos e reaproveitam qualquer formato desse.
+
+## Rateio de NF entre múltiplos Centros de Custo
+
+Em "Novo Lançamento", uma segunda aba **"Rateio entre Centros de Custo"** aparece ao lado do lançamento único. Uso: uma NF cuja Conta Contábil é a mesma em todas as fatias (ex.: telefonia Ascorp), mas o Centro de Custo muda — evita que o lançamento inteiro caia como divergência na linha de um único Centro.
+
+**Como funciona:**
+1. Digite o **código da Conta Contábil** (autocomplete busca entre as já cadastradas) — esse código é o mesmo em todas as fatias.
+2. Escolha a **Ordem de Pagamento de rateio** vinculada a esse código (uma OP só, cobrindo o valor total).
+3. Informe NF, Valor Total, datas.
+4. Adicione uma linha por Centro de Custo, com a **fração** (4 casas decimais). O valor de cada fatia é calculado automaticamente (fração × valor total). A soma das frações precisa fechar em 1,0000.
+5. Salvar cria **um lançamento por Centro de Custo** (cada um com sua própria checagem de divergência/antecedência), mas debita o saldo da OP **uma única vez**, pela soma de tudo — tudo numa transação atômica (`registrarLancamentoRateado` em `firestore.js`).
+
+**Mudança de modelo importante:** Ordens de Pagamento agora podem ser do **tipo "rateio"** — não presas a um Centro de Custo específico, só ao código da Conta Contábil. Isso é uma opção nova no formulário de "Ordens de pagamento" (checkbox "Esta OP é para rateio"), sem afetar OPs normais existentes.
+
+**Arredondamento:** cada fatia é arredondada em 2 casas, e a **última linha absorve a sobra** do arredondamento — garante que a soma bate exatamente com o Valor Total da NF, mesmo com frações tipo 0,3333/0,3333/0,3334.
+
+**Não incluído nesta versão:** importação de CSV para preencher as linhas do rateio automaticamente (hoje é manual, linha por linha) — dá pra adicionar depois se fizer falta.
 
 ## Próximos módulos (ainda não construídos)
 
