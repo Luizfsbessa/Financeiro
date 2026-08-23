@@ -19,6 +19,7 @@ import {
   listarTodasContas,
   listarOrdensPagamento,
   criarOrdemPagamento,
+  criarOrdemPagamentoRateio,
 } from "./firestore.js";
 
 const formatadorRS = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" });
@@ -58,8 +59,12 @@ async function conectarFormulario() {
   const form = document.getElementById("form-ordem-pagamento");
   if (!form) return;
 
+  const checkboxRateio = document.getElementById("op-eh-rateio");
+  const grupoNormal = document.getElementById("op-grupo-normal");
+  const grupoRateio = document.getElementById("op-grupo-rateio");
   const selCentro = document.getElementById("op-centro-custo");
   const selConta = document.getElementById("op-conta-contabil");
+  const inputContaCodigo = document.getElementById("op-conta-codigo-rateio");
   const inputSolicitacao = document.getElementById("op-numero-solicitacao");
   const inputNumeroOP = document.getElementById("op-numero-op");
   const inputSaldo = document.getElementById("op-saldo-total");
@@ -75,13 +80,34 @@ async function conectarFormulario() {
     preencherSelect(selConta, contas, "Selecione a Conta Contábil");
   });
 
+  checkboxRateio?.addEventListener("change", () => {
+    const ehRateio = checkboxRateio.checked;
+    grupoNormal.hidden = ehRateio;
+    grupoRateio.hidden = !ehRateio;
+    selCentro.required = !ehRateio;
+    selConta.required = !ehRateio;
+    inputContaCodigo.required = ehRateio;
+  });
+
   form.addEventListener("submit", async (evento) => {
     evento.preventDefault();
     status.textContent = "";
 
     const saldoTotal = parseFloat(inputSaldo.value);
-    if (!selConta.value || !saldoTotal || saldoTotal <= 0) {
-      status.textContent = "Preencha todos os campos com valores válidos.";
+    const ehRateio = checkboxRateio?.checked;
+
+    if (!saldoTotal || saldoTotal <= 0) {
+      status.textContent = "Informe um saldo total válido.";
+      status.classList.remove("sucesso");
+      return;
+    }
+    if (!ehRateio && !selConta.value) {
+      status.textContent = "Selecione a Conta Contábil.";
+      status.classList.remove("sucesso");
+      return;
+    }
+    if (ehRateio && !inputContaCodigo.value.trim()) {
+      status.textContent = "Informe o código da Conta Contábil (deve ser o mesmo em todas as fatias do rateio).";
       status.classList.remove("sucesso");
       return;
     }
@@ -90,15 +116,26 @@ async function conectarFormulario() {
     botao.disabled = true;
 
     try {
-      await criarOrdemPagamento({
-        numero_solicitacao: inputSolicitacao.value.trim(),
-        numero_op: inputNumeroOP.value.trim(),
-        centro_custo_id: selCentro.value,
-        conta_contabil_id: selConta.value,
-        saldo_total: saldoTotal,
-      });
+      if (ehRateio) {
+        await criarOrdemPagamentoRateio({
+          numeroSolicitacao: inputSolicitacao.value.trim(),
+          numeroOP: inputNumeroOP.value.trim(),
+          contaCodigo: inputContaCodigo.value.trim(),
+          saldoTotal,
+        });
+      } else {
+        await criarOrdemPagamento({
+          numero_solicitacao: inputSolicitacao.value.trim(),
+          numero_op: inputNumeroOP.value.trim(),
+          centro_custo_id: selCentro.value,
+          conta_contabil_id: selConta.value,
+          saldo_total: saldoTotal,
+        });
+      }
 
       form.reset();
+      grupoNormal.hidden = false;
+      grupoRateio.hidden = true;
       limparSelect(selConta, "Selecione a Conta Contábil");
       status.textContent = "Ordem de Pagamento registrada com sucesso.";
       status.classList.add("sucesso");
@@ -163,7 +200,7 @@ function aplicarFiltro() {
     if (centroFiltro && centro?.id !== centroFiltro) return false;
 
     if (termo) {
-      const alvo = `${op.numero_op ?? ""} ${op.numero_solicitacao ?? ""} ${conta?.nome ?? ""} ${centro?.nome ?? ""}`.toLowerCase();
+      const alvo = `${op.numero_op ?? ""} ${op.numero_solicitacao ?? ""} ${conta?.nome ?? ""} ${centro?.nome ?? ""} ${op.conta_codigo ?? ""}`.toLowerCase();
       if (!alvo.includes(termo)) return false;
     }
 
@@ -191,6 +228,7 @@ function renderizarLista(ordens, contasPorId, centrosPorId) {
     .map((op) => {
       const conta = contasPorId.get(op.conta_contabil_id);
       const centro = centrosPorId.get(conta?.centro_custo_id);
+      const ehRateio = op.tipo === "rateio";
       const saldoTotal = op.saldo_total ?? 0;
       const saldoDisponivel = op.saldo_disponivel ?? saldoTotal;
       const consumido = saldoTotal - saldoDisponivel;
@@ -200,9 +238,9 @@ function renderizarLista(ordens, contasPorId, centrosPorId) {
       return `
         <tr>
           <td class="col-conta">${op.numero_solicitacao || "—"}</td>
-          <td>${op.numero_op || "—"}</td>
-          <td>${centro?.nome ?? "—"}</td>
-          <td>${conta?.nome ?? "—"}</td>
+          <td>${op.numero_op || "—"}${ehRateio ? ' <span class="chip chip-alerta" style="margin-left:4px">rateio</span>' : ""}</td>
+          <td>${ehRateio ? "— (várias)" : centro?.nome ?? "—"}</td>
+          <td>${ehRateio ? op.conta_codigo ?? "—" : conta?.nome ?? "—"}</td>
           <td class="numero-tabular">${formatadorRS.format(saldoTotal)}</td>
           <td class="numero-tabular">${formatadorRS.format(saldoDisponivel)}</td>
           <td class="numero-tabular celula-heat ${classeHeat}">${pctConsumido.toFixed(0)}%</td>

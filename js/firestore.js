@@ -155,6 +155,87 @@ export async function listarTodosLancamentos() {
   return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
 }
 
+/** Busca a Conta Contábil de um Centro específico que tenha um dado código (usado no rateio). */
+export async function buscarContaPorCentroECodigo(centroCustoId, contaCodigo) {
+  const q = query(
+    collection(db, "contas_contabeis"),
+    where("centro_custo_id", "==", centroCustoId),
+    where("conta_codigo", "==", contaCodigo)
+  );
+  const snap = await getDocs(q);
+  return snap.empty ? null : { id: snap.docs[0].id, ...snap.docs[0].data() };
+}
+
+/**
+ * Cria uma Ordem de Pagamento do tipo "rateio" — NÃO amarrada a um único
+ * Centro de Custo (diferente da OP normal). Fica vinculada só ao código
+ * da Conta Contábil, que é o que se repete em todas as fatias do rateio.
+ */
+export async function criarOrdemPagamentoRateio({ numeroSolicitacao, numeroOP, contaCodigo, saldoTotal }) {
+  const ref = await addDoc(collection(db, "ordens_pagamento"), {
+    numero_solicitacao: numeroSolicitacao,
+    numero_op: numeroOP,
+    conta_codigo: contaCodigo,
+    tipo: "rateio",
+    saldo_total: saldoTotal,
+    saldo_disponivel: saldoTotal,
+  });
+  return ref.id;
+}
+
+/** Lista Ordens de Pagamento do tipo "rateio" vinculadas a um código de Conta Contábil. */
+export async function listarOrdensPagamentoRateioPorCodigo(contaCodigo) {
+  const q = query(
+    collection(db, "ordens_pagamento"),
+    where("tipo", "==", "rateio"),
+    where("conta_codigo", "==", contaCodigo)
+  );
+  const snap = await getDocs(q);
+  return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+}
+
+/**
+ * Grava TODAS as linhas de um rateio (um lançamento por Centro de Custo) e
+ * debita o saldo da Ordem de Pagamento UMA ÚNICA VEZ (soma de todas as
+ * linhas) — tudo numa transação atômica só. Se o saldo não cobrir a soma,
+ * nada é gravado. `linhas` já vem com os campos calculados (divergência,
+ * antecedência etc.) de processarLancamento, um objeto por Centro de Custo.
+ */
+export async function registrarLancamentoRateado(linhas, ordemPagamentoId) {
+  const opRef = doc(db, "ordens_pagamento", ordemPagamentoId);
+  const rateioGrupoId = doc(collection(db, "lancamentos")).id; // gera um ID só pra agrupar, sem gravar nada
+
+  await runTransaction(db, async (transacao) => {
+    const opSnap = await transacao.get(opRef);
+    if (!opSnap.exists()) {
+      throw new Error("Ordem de Pagamento não encontrada — pode ter sido removida.");
+    }
+
+    const saldoAtual = opSnap.data().saldo_disponivel ?? 0;
+    const somaTotal = linhas.reduce((acc, l) => acc + l.valor_nf, 0);
+
+    if (somaTotal > saldoAtual) {
+      throw new Error(
+        `Saldo insuficiente na Ordem de Pagamento (disponível: ${saldoAtual.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}, necessário: ${somaTotal.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}).`
+      );
+    }
+
+    linhas.forEach((linha) => {
+      const ref = doc(collection(db, "lancamentos"));
+      transacao.set(ref, {
+        ...linha,
+        ordem_pagamento_id: ordemPagamentoId,
+        rateio_grupo_id: rateioGrupoId,
+        criado_em: serverTimestamp(),
+      });
+    });
+
+    transacao.update(opRef, { saldo_disponivel: saldoAtual - somaTotal });
+  });
+
+  return rateioGrupoId;
+}
+
 // ============================================================
 // Cadastro — Centro de Custo, Conta Contábil, Serviço
 // (usado pela tela "Orçamento & Contas", que substitui a

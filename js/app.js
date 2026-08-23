@@ -12,6 +12,7 @@
 
 import { entrarComGoogle, sair, observarAutenticacao, dadosDoLancador } from "./auth.js";
 import { iniciarFormLancamento } from "./form-lancamento.js";
+import { iniciarRateio } from "./rateio.js";
 import { iniciarDashboard, invalidarDashboard, dashboardJaCarregado, iniciarPainelTerceiros, invalidarPainelTerceiros, painelTerceirosJaCarregado } from "./dashboard.js";
 import { iniciarOrdensPagamento } from "./ordens-pagamento.js";
 import { iniciarOrcamento } from "./orcamento.js";
@@ -60,6 +61,7 @@ function irParaSecao(nomeSecao, user) {
         console.error("Erro ao iniciar tela de lançamento:", erro);
         // formLancamentoIniciado continua false — próxima visita à aba tenta de novo
       });
+    iniciarRateio(user);
   }
 
   if (nomeSecao === "dashboard" && !dashboardJaCarregado()) {
