@@ -33,6 +33,7 @@
   background: var(--paper-0);
   position: sticky;
   top: 0;
+  z-index: 3;
 }
 
 .tabela-matriz .col-conta,
@@ -42,9 +43,10 @@
   left: 0;
   background: var(--paper-1);
   min-width: 200px;
+  z-index: 1;
 }
 
-.tabela-matriz th.col-conta { background: var(--paper-0); }
+.tabela-matriz th.col-conta { background: var(--paper-0); z-index: 4; }
 
 .tabela-matriz .col-mes { min-width: 84px; }
 
@@ -55,6 +57,16 @@
   font-weight: 600;
   text-align: left;
   padding: var(--space-2) var(--space-3);
+}
+/* A coluna sticky (.col-conta) tem sua própria regra de fundo que, por
+   especificidade, vencia o fundo escuro de .linha-centro td só nessa
+   célula — texto branco sobre fundo claro, ilegível. Reforça aqui com
+   mais especificidade pra garantir que a linha do Centro fica inteira
+   com o mesmo fundo escuro, sem "remendo" na coluna presa. */
+.tabela-matriz .linha-centro .col-conta {
+  background: var(--brand-900);
+  color: var(--paper-0);
+  z-index: 2;
 }
 .centro-codigo {
   font-family: var(--font-ledger);
@@ -84,8 +96,24 @@
 .linha-centro .heat-centro-amarelo { color: #F0C674; font-weight: 700; }
 .linha-centro .heat-centro-vermelho { color: #F2A3A3; font-weight: 700; }
 
+.linha-centro {
+  cursor: pointer;
+  user-select: none;
+}
+.icone-toggle {
+  display: inline-block;
+  width: 14px;
+  font-size: 10px;
+  opacity: 0.7;
+  transition: transform 0.15s ease;
+}
+.linha-centro.colapsado .icone-toggle {
+  transform: rotate(-90deg);
+}
 .legenda-heatmap {
   display: flex;
+  align-items: center;
+  flex-wrap: wrap;
   gap: var(--space-3);
   margin-top: var(--space-4);
 }
