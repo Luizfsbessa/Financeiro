@@ -16,7 +16,7 @@
 //   Index > 100%           → vermelho
 // ============================================================
 
-import { listarCentrosCusto, listarTodasContas, listarLancamentosPorConta } from "./firestore.js";
+import { listarCentrosCusto, listarTodasContas, listarLancamentosPorConta, listarServicosPorConta } from "./firestore.js";
 
 const NOMES_MES_ABREV = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
 const CHAVES_MES = ["jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez"];
@@ -46,10 +46,26 @@ async function iniciarPainelMatriz({ containerId, filtroTipoGestao, mensagemVazi
 
     const linhas = await Promise.all(
       contas.map(async (conta) => {
-        const lancamentos = await listarLancamentosPorConta(conta.id);
+        const [lancamentos, servicos] = await Promise.all([
+          listarLancamentosPorConta(conta.id),
+          listarServicosPorConta(conta.id),
+        ]);
         const realizadoPorMes = agregarRealizadoPorMes(lancamentos);
         const centro = centros.find((c) => c.id === conta.centro_custo_id);
-        return { conta, centro, realizadoPorMes };
+
+        const lancamentosPorServico = new Map();
+        lancamentos.forEach((l) => {
+          const chave = l.servico_id || "_sem_servico";
+          if (!lancamentosPorServico.has(chave)) lancamentosPorServico.set(chave, []);
+          lancamentosPorServico.get(chave).push(l);
+        });
+
+        const servicosDetalhe = servicos.map((servico) => ({
+          servico,
+          realizadoPorMes: agregarRealizadoPorMes(lancamentosPorServico.get(servico.id) || []),
+        }));
+
+        return { conta, centro, realizadoPorMes, servicosDetalhe };
       })
     );
 
@@ -158,9 +174,9 @@ function renderizarTabela(container, centros, linhas) {
         </tr>`;
 
       const linhasConta = contasDoGrupo.length === 0
-        ? `<tr data-grupo-de="${centro.id}"><td colspan="${5 + 12}" style="color: var(--ink-400); font-style: italic">Nenhuma Conta Contábil cadastrada ainda.</td></tr>`
+        ? `<tr data-centro="${centro.id}"><td colspan="${5 + 12}" style="color: var(--ink-400); font-style: italic">Nenhuma Conta Contábil cadastrada ainda.</td></tr>`
         : contasDoGrupo
-        .map(({ conta, realizadoPorMes }) => {
+        .map(({ conta, realizadoPorMes, servicosDetalhe }) => {
           const acumuladoRealizado = realizadoPorMes.reduce((a, b) => a + b, 0);
           const aprovadoPorMes = CHAVES_MES.map((chave) => conta.orcamento_aprovado?.[chave] ?? 0);
           const acumuladoAprovado = aprovadoPorMes.reduce((a, b) => a + b, 0);
@@ -172,15 +188,44 @@ function renderizarTabela(container, centros, linhas) {
             .map((valor) => `<td class="col-mes numero-tabular">${valor > 0 ? formatadorRS.format(valor) : "—"}</td>`)
             .join("");
 
-          return `
-            <tr data-grupo-de="${centro.id}">
-              <td class="col-conta">${conta.nome}</td>
+          const linhaConta = `
+            <tr class="linha-conta" data-centro="${centro.id}" data-grupo-toggle-conta="${conta.id}">
+              <td class="col-conta"><span class="icone-toggle">▸</span>${conta.nome}</td>
               ${celulasMeses}
               <td class="numero-tabular">${formatadorRS.format(acumuladoRealizado)}</td>
               <td class="numero-tabular">${acumuladoAprovado > 0 ? formatadorRS.format(acumuladoAprovado) : "—"}</td>
               <td class="numero-tabular">${formatadorRS.format(variacao)}</td>
               <td class="numero-tabular celula-heat ${classeHeat}">${acumuladoAprovado > 0 ? indexPct.toFixed(1) + "%" : "—"}</td>
             </tr>`;
+
+          const linhasServico = servicosDetalhe.length === 0
+            ? `<tr data-centro="${centro.id}" data-conta="${conta.id}" style="display:none"><td colspan="${5 + 12}" style="color: var(--ink-400); font-style: italic; padding-left: 32px">Nenhum Serviço cadastrado nesta conta ainda.</td></tr>`
+            : servicosDetalhe
+                .map(({ servico, realizadoPorMes: realizadoServico }) => {
+                  const acumuladoServico = realizadoServico.reduce((a, b) => a + b, 0);
+                  const projetadoPorMes = CHAVES_MES.map((chave) => servico.orcamento_projetado?.[chave] ?? 0);
+                  const acumuladoProjetado = projetadoPorMes.reduce((a, b) => a + b, 0);
+                  const variacaoServico = acumuladoProjetado - acumuladoServico;
+                  const indexServico = acumuladoProjetado > 0 ? (acumuladoServico / acumuladoProjetado) * 100 : 0;
+                  const classeHeatServico = acumuladoProjetado > 0 ? classificarIndex(indexServico) : "heat-sem-dados";
+
+                  const celulasServico = realizadoServico
+                    .map((valor) => `<td class="col-mes numero-tabular">${valor > 0 ? formatadorRS.format(valor) : "—"}</td>`)
+                    .join("");
+
+                  return `
+                    <tr class="linha-servico" data-centro="${centro.id}" data-conta="${conta.id}" style="display:none">
+                      <td class="col-conta">${servico.nome}</td>
+                      ${celulasServico}
+                      <td class="numero-tabular">${formatadorRS.format(acumuladoServico)}</td>
+                      <td class="numero-tabular">${acumuladoProjetado > 0 ? formatadorRS.format(acumuladoProjetado) : "—"}</td>
+                      <td class="numero-tabular">${formatadorRS.format(variacaoServico)}</td>
+                      <td class="numero-tabular celula-heat ${classeHeatServico}">${acumuladoProjetado > 0 ? indexServico.toFixed(1) + "%" : "—"}</td>
+                    </tr>`;
+                })
+                .join("");
+
+          return linhaConta + linhasServico;
         })
         .join("");
 
@@ -193,7 +238,7 @@ function renderizarTabela(container, centros, linhas) {
       <table class="tabela-matriz">
         <thead>
           <tr>
-            <th class="col-conta">Centro de Custo / Conta Contábil</th>
+            <th class="col-conta">Centro de Custo / Conta Contábil / Serviço</th>
             ${cabecalhoMeses}
             <th>Acum. Realizado</th>
             <th>Acum. Aprovado</th>
@@ -210,19 +255,45 @@ function renderizarTabela(container, centros, linhas) {
       <span class="chip heat-verde">Index ≤ 95%</span>
       <span class="chip heat-amarelo">95,1% – 100%</span>
       <span class="chip heat-vermelho">Index &gt; 100%</span>
-      <span style="margin-left: auto; color: var(--ink-400); font-size: var(--text-xs)">Clique no nome do Centro para recolher/expandir</span>
+      <span style="margin-left: auto; color: var(--ink-400); font-size: var(--text-xs)">Clique no Centro ou na Conta para recolher/expandir</span>
     </div>
   `;
 
-  // Clique no nome do Centro recolhe/expande suas Contas — mais simples e
-  // confiável do que tentar recolher automaticamente ao rolar a página.
+  // --- Visibilidade orientada a estado: um Set guarda quais Centros estão
+  // recolhidos e outro quais Contas estão EXPANDIDAS (o padrão é recolhida).
+  // Recalcula tudo a cada clique, então a combinação Centro+Conta nunca
+  // fica inconsistente, não importa a ordem dos cliques. ---
+  const centrosColapsados = new Set();
+  const contasExpandidas = new Set();
+
+  function atualizarVisibilidade() {
+    container.querySelectorAll("tr[data-centro]").forEach((linha) => {
+      const centroId = linha.dataset.centro;
+      const contaId = linha.dataset.conta; // só existe em linhas de Serviço
+
+      if (centrosColapsados.has(centroId)) {
+        linha.style.display = "none";
+        return;
+      }
+      linha.style.display = contaId ? (contasExpandidas.has(contaId) ? "" : "none") : "";
+    });
+  }
+
   container.querySelectorAll("[data-grupo-toggle]").forEach((linhaCentroEl) => {
     linhaCentroEl.addEventListener("click", () => {
-      const grupoId = linhaCentroEl.dataset.grupoToggle;
+      const centroId = linhaCentroEl.dataset.grupoToggle;
       const colapsado = linhaCentroEl.classList.toggle("colapsado");
-      container.querySelectorAll(`[data-grupo-de="${grupoId}"]`).forEach((linha) => {
-        linha.style.display = colapsado ? "none" : "";
-      });
+      colapsado ? centrosColapsados.add(centroId) : centrosColapsados.delete(centroId);
+      atualizarVisibilidade();
+    });
+  });
+
+  container.querySelectorAll("[data-grupo-toggle-conta]").forEach((linhaContaEl) => {
+    linhaContaEl.addEventListener("click", () => {
+      const contaId = linhaContaEl.dataset.grupoToggleConta;
+      const expandido = linhaContaEl.classList.toggle("expandido");
+      expandido ? contasExpandidas.add(contaId) : contasExpandidas.delete(contaId);
+      atualizarVisibilidade();
     });
   });
 }
