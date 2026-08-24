@@ -148,8 +148,8 @@ function renderizarTabela(container, centros, linhas) {
         .join("");
 
       const linhaCentro = `
-        <tr class="linha-centro">
-          <td class="col-conta">${centro.nome}${centro.codigo_centro ? ` <span class="centro-codigo">— ${centro.codigo_centro}</span>` : ""}</td>
+        <tr class="linha-centro" data-grupo-toggle="${centro.id}">
+          <td class="col-conta"><span class="icone-toggle">▾</span>${centro.nome}${centro.codigo_centro ? ` <span class="centro-codigo">— ${centro.codigo_centro}</span>` : ""}</td>
           ${celulasMesesCentro}
           <td class="numero-tabular">${formatadorRS.format(somaRealizado)}</td>
           <td class="numero-tabular">${somaAprovado > 0 ? formatadorRS.format(somaAprovado) : "—"}</td>
@@ -158,7 +158,7 @@ function renderizarTabela(container, centros, linhas) {
         </tr>`;
 
       const linhasConta = contasDoGrupo.length === 0
-        ? `<tr><td colspan="${5 + 12}" style="color: var(--ink-400); font-style: italic">Nenhuma Conta Contábil cadastrada ainda.</td></tr>`
+        ? `<tr data-grupo-de="${centro.id}"><td colspan="${5 + 12}" style="color: var(--ink-400); font-style: italic">Nenhuma Conta Contábil cadastrada ainda.</td></tr>`
         : contasDoGrupo
         .map(({ conta, realizadoPorMes }) => {
           const acumuladoRealizado = realizadoPorMes.reduce((a, b) => a + b, 0);
@@ -173,7 +173,7 @@ function renderizarTabela(container, centros, linhas) {
             .join("");
 
           return `
-            <tr>
+            <tr data-grupo-de="${centro.id}">
               <td class="col-conta">${conta.nome}</td>
               ${celulasMeses}
               <td class="numero-tabular">${formatadorRS.format(acumuladoRealizado)}</td>
@@ -210,6 +210,19 @@ function renderizarTabela(container, centros, linhas) {
       <span class="chip heat-verde">Index ≤ 95%</span>
       <span class="chip heat-amarelo">95,1% – 100%</span>
       <span class="chip heat-vermelho">Index &gt; 100%</span>
+      <span style="margin-left: auto; color: var(--ink-400); font-size: var(--text-xs)">Clique no nome do Centro para recolher/expandir</span>
     </div>
   `;
+
+  // Clique no nome do Centro recolhe/expande suas Contas — mais simples e
+  // confiável do que tentar recolher automaticamente ao rolar a página.
+  container.querySelectorAll("[data-grupo-toggle]").forEach((linhaCentroEl) => {
+    linhaCentroEl.addEventListener("click", () => {
+      const grupoId = linhaCentroEl.dataset.grupoToggle;
+      const colapsado = linhaCentroEl.classList.toggle("colapsado");
+      container.querySelectorAll(`[data-grupo-de="${grupoId}"]`).forEach((linha) => {
+        linha.style.display = colapsado ? "none" : "";
+      });
+    });
+  });
 }
