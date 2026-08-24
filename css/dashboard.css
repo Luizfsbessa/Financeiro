@@ -100,6 +100,24 @@
   cursor: pointer;
   user-select: none;
 }
+.linha-conta {
+  cursor: pointer;
+  user-select: none;
+}
+.linha-conta .col-conta {
+  padding-left: 20px;
+}
+.linha-conta .icone-toggle {
+  margin-left: 4px;
+}
+.linha-conta.expandido .icone-toggle {
+  transform: rotate(90deg);
+}
+.linha-servico .col-conta {
+  padding-left: 40px;
+  color: var(--ink-700);
+  font-size: var(--text-sm);
+}
 .icone-toggle {
   display: inline-block;
   width: 14px;
