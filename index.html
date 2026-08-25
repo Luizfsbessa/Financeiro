@@ -81,6 +81,10 @@
           <span class="icone"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M14 3v6h6"/><path d="M8 13h8M8 17h8"/></svg></span>
           <span class="texto">Relatórios</span>
         </a></li>
+        <li><a href="#usuarios" data-secao="usuarios" title="Usuários & Permissões">
+          <span class="icone"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></span>
+          <span class="texto">Usuários &amp; Permissões</span>
+        </a></li>
       </ul>
 
       <div class="sidebar-usuario">
@@ -445,6 +449,45 @@
 
         <div id="relatorio-conteudo">
           <p class="preview-vazio">Selecione um relatório acima.</p>
+        </div>
+      </section>
+
+      <!-- ===== Aba: Usuários & Permissões (só Administrador) ===== -->
+      <section id="secao-usuarios" class="secao-conteudo" hidden>
+        <header><h2>Usuários &amp; Permissões</h2></header>
+        <p style="color: var(--ink-400); font-size: var(--text-sm); margin-bottom: var(--space-4); margin-top: calc(-1 * var(--space-4))">
+          Só e-mails cadastrados aqui conseguem entrar no Bills. A trava de verdade está nas Regras do Firestore — isto aqui é o cadastro que elas consultam.
+        </p>
+
+        <form id="form-usuario" class="cartao-form" style="max-width: 640px; margin-bottom: var(--space-6)">
+          <h3 id="usr-titulo" style="margin-bottom: var(--space-3)">Autorizar novo e-mail</h3>
+          <div class="campo-duplo">
+            <div class="campo">
+              <label for="usr-email">E-mail (Google)</label>
+              <input type="email" id="usr-email" autocomplete="off" required />
+            </div>
+            <div class="campo">
+              <label for="usr-nome">Nome (opcional)</label>
+              <input type="text" id="usr-nome" autocomplete="off" />
+            </div>
+          </div>
+          <div class="campo">
+            <label for="usr-papel">Papel</label>
+            <select id="usr-papel">
+              <option value="administrador">Administrador — acesso total, inclusive gerenciar usuários</option>
+              <option value="financeiro">Financeiro — lança NF, cria OP, vê relatórios</option>
+              <option value="leitura" selected>Leitura — só visualiza Painel e Relatórios</option>
+            </select>
+          </div>
+          <div style="display: flex; gap: var(--space-3)">
+            <button type="submit" id="usr-salvar" class="botao-primario">Salvar</button>
+            <button type="button" id="usr-cancelar" class="botao-primario" style="background: var(--ink-400)">Cancelar edição</button>
+          </div>
+          <p id="usr-status" class="form-status" role="status"></p>
+        </form>
+
+        <div id="lista-usuarios">
+          <p class="preview-vazio">Carregando...</p>
         </div>
       </section>
 

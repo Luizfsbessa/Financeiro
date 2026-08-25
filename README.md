@@ -83,6 +83,7 @@ vitale-conciliacao/
 │   ├── orcamento.js          → cadastro de Centro de Custo, Conta Contábil e Serviço
 │   ├── relatorios.js          → 4 relatórios + exportação Excel/PDF
 │   ├── exportadores.js        → exportação genérica (Excel via SheetJS, PDF via jsPDF)
+│   ├── usuarios.js             → cadastro de e-mails autorizados e papéis
 │   ├── seed-dados-exemplo.js → dados de teste (usar só em desenvolvimento)
 │   └── app.js                → liga autenticação, roteamento de abas e módulos
 └── icons/               → ícones do PWA (192x192 e 512x512 — adicionar depois)
@@ -172,9 +173,34 @@ Uma OP normal agora fica presa não só ao Centro de Custo + Conta Contábil, ma
 
 **Compatibilidade com dados antigos:** as OPs importadas antes dessa trava existir não têm `servico_id` — continuam aparecendo como elegíveis pra qualquer Serviço daquela Conta (tratadas como exceção histórica, não a regra daqui pra frente).
 
+## Controle de Acesso (Usuários & Permissões)
+
+O login com Google sozinho não restringe quem entra — qualquer conta Google conseguia acessar tudo antes desta mudança. Agora:
+
+- **Lista de e-mails autorizados:** só quem estiver cadastrado em "Usuários & Permissões" (com `ativo: true`) consegue entrar. Quem não estiver é deslogado imediatamente após o login do Google, sem ver nenhuma tela do app.
+- **3 papéis:**
+  - **Administrador** — acesso total, inclusive gerenciar Centro/Conta/Serviço e outros usuários.
+  - **Financeiro** — lança NF, cria/edita Ordem de Pagamento, vê Painel/Relatórios — mas não mexe em cadastro (Centro/Conta/Serviço) nem em usuários.
+  - **Leitura** — só visualiza Painel, Centros de Terceiros e Relatórios.
+- **A trava de verdade está em `firestore.rules`**, não só escondendo botão na tela — mesmo que alguém tente escrever direto no banco (fora do app), as regras bloqueiam.
+
+### ⚠️ Como ativar (passo a passo obrigatório, nesta ordem)
+
+Errar a ordem aqui te tranca pra fora do próprio app. Siga exatamente assim:
+
+1. **Suba todos os arquivos desta atualização primeiro** (index.html, todo `js/`, `firestore.rules`) — mas **ainda não publique as novas regras no Firebase**.
+2. **Cadastre você mesmo manualmente**, direto no Console do Firebase (não pelo app):
+   - Firestore Database → coleção `usuarios_autorizados` → "Adicionar documento"
+   - **ID do documento:** seu e-mail em minúsculas (ex.: `luiz@gmail.com`)
+   - Campos: `email` (string, mesmo valor do ID), `nome` (string), `papel` (string) = `administrador`, `ativo` (boolean) = `true`
+3. **Só depois** disso, vá em Firestore Database → aba "Regras" → apague tudo → cole o conteúdo de `firestore.rules` → Publicar.
+4. **Teste imediatamente** logando você mesmo no app, antes de avisar qualquer outra pessoa.
+5. Se algo travar: o arquivo `firestore.rules.PERMISSIVO-BACKUP` (nesta mesma pasta) tem as regras antigas — cole ele de volta nas Regras do Console pra reabrir tudo enquanto investiga com calma.
+
+Depois disso funcionando, todo o resto de cadastro de usuário (adicionar Financeiro, Leitura, desativar acesso) é feito direto pela tela "Usuários & Permissões" do app — não precisa mais voltar no Console.
+
 ## Próximos módulos (ainda não construídos)
 
 - Upload de foto da NF (Storage) — adiado, veja a seção sobre o plano Blaze acima.
 - Filtros no painel (por período, Centro de Custo, usuário) — hoje mostra o ano acumulado inteiro.
-- Regras de segurança por papel (hoje qualquer usuário logado pode editar qualquer coisa — está OK para desenvolvimento, mas precisa refinar antes de usar com o condomínio de verdade).
 - **Multi-workspace (para virar produto de verdade):** hoje todos os dados vivem soltos nas coleções `centros_custo`, `contas_contabeis`, `servicos` e `lancamentos` — ou seja, é um projeto Firebase por cliente/uso. Para usar isso em vários contextos diferentes (não só o condomínio) dentro do mesmo projeto, o próximo passo estrutural é introduzir um conceito de "workspace" (ex.: `workspaces/{id}/centros_custo/...`), com cada usuário vinculado a um ou mais workspaces — isso já habilita usar o Bills tanto pro condomínio quanto para outra necessidade, sem misturar os dados. Vale planejar antes de crescer muito o cadastro atual, porque migrar depois dá mais trabalho do que decidir agora.
