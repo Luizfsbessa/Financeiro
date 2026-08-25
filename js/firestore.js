@@ -337,7 +337,8 @@ export async function verificarUsuarioAutorizado(email) {
   const emailNormalizado = normalizarEmail(email);
   const snap = await getDoc(doc(db, "usuarios_autorizados", emailNormalizado));
   if (!snap.exists() || snap.data().ativo !== true) return null;
-  return snap.data().papel ?? null;
+  const papel = snap.data().papel;
+  return papel ? String(papel).trim().toLowerCase() : null;
 }
 
 /** Cria ou atualiza um usuário autorizado — só quem já é Administrador consegue (pelas regras). */
@@ -345,7 +346,7 @@ export async function salvarUsuarioAutorizado({ email, nome, papel, ativo }) {
   const emailNormalizado = normalizarEmail(email);
   await setDoc(
     doc(db, "usuarios_autorizados", emailNormalizado),
-    { email: emailNormalizado, nome: nome?.trim() || "", papel, ativo },
+    { email: emailNormalizado, nome: nome?.trim() || "", papel: String(papel).trim().toLowerCase(), ativo },
     { merge: true }
   );
   return emailNormalizado;
