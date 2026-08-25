@@ -1,0 +1,104 @@
+// ============================================================
+// firestore.rules
+// Controle de acesso por PAPEL, consultando a coleção
+// usuarios_autorizados (e-mail em minúsculas = ID do documento).
+//
+// PAPÉIS:
+//   administrador — acesso total, inclusive gerenciar usuários
+//   financeiro    — lê tudo, lança NF e cria/edita Ordem de Pagamento;
+//                   NÃO mexe em Centro/Conta/Serviço nem em usuários
+//   leitura       — só lê, não escreve nada
+//
+// COMO APLICAR (leia isso inteiro antes de publicar):
+//
+// 1) PRIMEIRO, cadastre manualmente o SEU PRÓPRIO e-mail como
+//    administrador — direto no Console do Firebase, SEM usar o app
+//    (o app ainda não tem ninguém autorizado, então ninguém consegue
+//    usar a tela "Usuários & Permissões" pra criar o primeiro registro).
+//      Console do Firebase → Firestore Database → coleção
+//      "usuarios_autorizados" → "Adicionar documento" →
+//      ID do documento: SEU-EMAIL-EM-MINUSCULAS@dominio.com
+//      Campos:
+//        email      (string) = mesmo valor do ID, em minúsculas
+//        nome       (string) = seu nome
+//        papel      (string) = administrador
+//        ativo      (boolean) = true
+//
+// 2) SÓ DEPOIS de criar esse documento, cole estas regras aqui e
+//    publique. Se publicar antes do passo 1, você mesmo fica
+//    bloqueado do próprio app (a leitura do seu registro ainda
+//    funcionaria, mas ele não vai existir, então "autorizado()"
+//    dá falso e tudo mais fica fechado).
+//
+// 3) Teste imediatamente logando você mesmo, ANTES de avisar
+//    qualquer outra pessoa. Se algo travar, o arquivo
+//    firestore.rules.PERMISSIVO-BACKUP (neste mesmo projeto) tem as
+//    regras antigas — cole ele de volta no Console pra reabrir tudo
+//    enquanto investiga com calma.
+// ============================================================
+
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function emailAtual() {
+      return request.auth.token.email.lower();
+    }
+
+    function registroUsuario() {
+      return get(/databases/$(database)/documents/usuarios_autorizados/$(emailAtual()));
+    }
+
+    function autorizado() {
+      return request.auth != null
+        && exists(/databases/$(database)/documents/usuarios_autorizados/$(emailAtual()))
+        && registroUsuario().data.ativo == true;
+    }
+
+    function papel() {
+      return autorizado() ? registroUsuario().data.papel.lower() : null;
+    }
+
+    function ehAdmin() { return papel() == 'administrador'; }
+    function ehFinanceiroOuAdmin() { return papel() == 'administrador' || papel() == 'financeiro'; }
+
+    // --- Usuários autorizados ---
+    // Qualquer pessoa logada pode ler o PRÓPRIO registro (é assim que o
+    // app decide se deixa entrar) — mas só Administrador lê a lista
+    // inteira ou grava qualquer registro (o dela ou o de outra pessoa).
+    match /usuarios_autorizados/{email} {
+      allow read: if request.auth != null && (emailAtual() == email || ehAdmin());
+      allow write: if ehAdmin();
+    }
+
+    // --- Cadastro (só Administrador edita) ---
+    match /centros_custo/{id} {
+      allow read: if autorizado();
+      allow write: if ehAdmin();
+    }
+    match /contas_contabeis/{id} {
+      allow read: if autorizado();
+      allow write: if ehAdmin();
+    }
+    match /servicos/{id} {
+      allow read: if autorizado();
+      allow write: if ehAdmin();
+    }
+
+    // --- Operação do dia a dia (Financeiro ou Administrador) ---
+    match /ordens_pagamento/{id} {
+      allow read: if autorizado();
+      allow write: if ehFinanceiroOuAdmin();
+    }
+    match /lancamentos/{id} {
+      allow read: if autorizado();
+      allow write: if ehFinanceiroOuAdmin();
+    }
+
+    // --- Qualquer coleção futura não listada acima: só Administrador ---
+    match /{document=**} {
+      allow read, write: if ehAdmin();
+    }
+  }
+}
