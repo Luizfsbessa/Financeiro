@@ -11,13 +11,14 @@
 // ============================================================
 
 import { entrarComGoogle, sair, observarAutenticacao, dadosDoLancador } from "./auth.js";
-import { listarCentrosCusto, listarTodasContas } from "./firestore.js";
+import { listarCentrosCusto, listarTodasContas, verificarUsuarioAutorizado } from "./firestore.js";
 import { iniciarFormLancamento } from "./form-lancamento.js";
 import { iniciarRateio } from "./rateio.js";
 import { iniciarDashboard, invalidarDashboard, dashboardJaCarregado, iniciarPainelTerceiros, invalidarPainelTerceiros, painelTerceirosJaCarregado } from "./dashboard.js";
 import { iniciarOrdensPagamento } from "./ordens-pagamento.js";
 import { iniciarOrcamento } from "./orcamento.js";
 import { iniciarRelatorios } from "./relatorios.js";
+import { iniciarUsuarios } from "./usuarios.js";
 
 const telaLogin = document.getElementById("tela-login");
 const appShell = document.getElementById("app-shell");
@@ -43,9 +44,36 @@ botaoSidebarToggle?.addEventListener("click", () => {
 
 let formLancamentoIniciado = false;
 let usuarioAtual = null;
+let papelAtual = null;
+
+// Quais papéis podem ver cada seção do menu — só controla a VISIBILIDADE
+// (conveniência de interface). A trava de verdade está nas Regras do
+// Firestore; esconder um item aqui nunca substitui isso.
+const PERMISSOES_NAV = {
+  dashboard: ["administrador", "financeiro", "leitura"],
+  terceiros: ["administrador", "financeiro", "leitura"],
+  lancamento: ["administrador", "financeiro"],
+  "ordens-pagamento": ["administrador", "financeiro"],
+  orcamento: ["administrador"],
+  relatorios: ["administrador", "financeiro", "leitura"],
+  usuarios: ["administrador"],
+};
+
+function aplicarPermissoesNav(papel) {
+  linksNav.forEach((link) => {
+    const permitido = PERMISSOES_NAV[link.dataset.secao]?.includes(papel) ?? false;
+    link.closest("li").hidden = !permitido;
+  });
+}
 
 // --- Roteamento simples entre seções (sem framework, só troca de "hidden") ---
 function irParaSecao(nomeSecao, user) {
+  // Blindagem de UX (não é a segurança de verdade, isso está nas Regras do
+  // Firestore) — evita cair numa tela vazia se o link nem devesse aparecer.
+  if (!PERMISSOES_NAV[nomeSecao]?.includes(papelAtual)) {
+    nomeSecao = "dashboard";
+  }
+
   document.querySelectorAll(".secao-conteudo").forEach((secao) => {
     secao.hidden = secao.id !== `secao-${nomeSecao}`;
   });
@@ -84,6 +112,10 @@ function irParaSecao(nomeSecao, user) {
   if (nomeSecao === "relatorios") {
     iniciarRelatorios();
   }
+
+  if (nomeSecao === "usuarios") {
+    iniciarUsuarios();
+  }
 }
 
 linksNav.forEach((link) => {
@@ -93,10 +125,13 @@ linksNav.forEach((link) => {
   });
 });
 
-function mostrarApp(user) {
+function mostrarApp(user, papel) {
   usuarioAtual = user;
+  papelAtual = papel;
   telaLogin.style.display = "none";
   appShell.classList.add("ativo");
+
+  aplicarPermissoesNav(papel);
 
   const lancador = dadosDoLancador(user);
   usuarioNomeEl.textContent = lancador.usuario_nome || lancador.usuario_email;
@@ -133,11 +168,29 @@ botaoSair.addEventListener("click", async () => {
 
 // Observa o estado de login em todo carregamento da página —
 // mantém o usuário logado entre sessões (comportamento padrão do Firebase Auth).
-observarAutenticacao((user) => {
-  if (user) {
-    mostrarApp(user);
-  } else {
+// A cada mudança, confere se o e-mail está na lista de autorizados ANTES
+// de mostrar qualquer tela do app — quem não está na lista é deslogado
+// na hora, sem ver nada além da mensagem de acesso negado.
+observarAutenticacao(async (user) => {
+  if (!user) {
     mostrarLogin();
+    return;
+  }
+
+  try {
+    const papel = await verificarUsuarioAutorizado(user.email);
+    if (!papel) {
+      await sair();
+      mostrarLogin();
+      loginErro.textContent = `O e-mail ${user.email} não está autorizado a acessar o Bills. Fale com o administrador.`;
+      return;
+    }
+    mostrarApp(user, papel);
+  } catch (erro) {
+    console.error("Erro ao verificar autorização:", erro);
+    await sair();
+    mostrarLogin();
+    loginErro.textContent = "Não foi possível confirmar sua autorização. Tente novamente.";
   }
 });
 

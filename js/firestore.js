@@ -10,8 +10,10 @@ import {
   query,
   where,
   getDocs,
+  getDoc,
   addDoc,
   doc,
+  setDoc,
   updateDoc,
   runTransaction,
   serverTimestamp,
@@ -302,4 +304,49 @@ export async function criarServico({ nome, contaContabilId, orcamentoProjetado }
 /** Atualiza nome/orçamento projetado de um Serviço existente. */
 export async function atualizarServico(id, dados) {
   await updateDoc(doc(db, "servicos", id), dados);
+}
+
+// ============================================================
+// Controle de Acesso — usuários autorizados e papéis
+//
+// O e-mail (normalizado em minúsculas) é o próprio ID do documento —
+// isso permite cadastrar alguém ANTES de essa pessoa nunca ter logado
+// (não dependemos do UID, que só existe depois do primeiro login), e
+// permite que as Regras do Firestore façam a checagem de autorização
+// com um único get() direto pelo e-mail do token, sem precisar de
+// Cloud Functions nem custom claims.
+// ============================================================
+
+function normalizarEmail(email) {
+  return email.trim().toLowerCase();
+}
+
+/** Lista todos os usuários autorizados (a leitura da coleção inteira exige papel Administrador, pelas regras). */
+export async function listarUsuariosAutorizados() {
+  const snap = await getDocs(collection(db, "usuarios_autorizados"));
+  return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+}
+
+/**
+ * Verifica se um e-mail está autorizado e ativo, devolvendo o papel
+ * ("administrador" | "financeiro" | "leitura") ou null se não autorizado.
+ * Qualquer usuário logado pode ler o PRÓPRIO registro (mesmo antes de
+ * estar autorizado) — é assim que o app decide se deixa a pessoa entrar.
+ */
+export async function verificarUsuarioAutorizado(email) {
+  const emailNormalizado = normalizarEmail(email);
+  const snap = await getDoc(doc(db, "usuarios_autorizados", emailNormalizado));
+  if (!snap.exists() || snap.data().ativo !== true) return null;
+  return snap.data().papel ?? null;
+}
+
+/** Cria ou atualiza um usuário autorizado — só quem já é Administrador consegue (pelas regras). */
+export async function salvarUsuarioAutorizado({ email, nome, papel, ativo }) {
+  const emailNormalizado = normalizarEmail(email);
+  await setDoc(
+    doc(db, "usuarios_autorizados", emailNormalizado),
+    { email: emailNormalizado, nome: nome?.trim() || "", papel, ativo },
+    { merge: true }
+  );
+  return emailNormalizado;
 }
