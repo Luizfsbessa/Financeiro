@@ -180,6 +180,15 @@
 }
 .botao-link:hover { text-decoration: underline; }
 
+.link-movidesk {
+  display: inline-block;
+  margin-top: var(--space-1);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  color: var(--brass-500);
+}
+.link-movidesk:hover { text-decoration: underline; }
+
 .relatorio-abas {
   display: flex;
   gap: var(--space-2);
