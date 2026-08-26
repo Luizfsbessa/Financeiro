@@ -126,7 +126,7 @@
 
         <div id="lancamento-modo-unico">
         <div class="grid-lancamento">
-          <form id="form-lancamento" class="cartao-form">
+          <form id="form-lancamento" class="cartao-form" autocomplete="off">
             <div class="campo">
               <label for="campo-centro-custo">Centro de Custo</label>
               <select id="campo-centro-custo" required>
@@ -166,17 +166,17 @@
 
             <div class="campo">
               <label for="campo-valor-nf">Valor da NF (R$)</label>
-              <input type="number" id="campo-valor-nf" min="0.01" step="0.01" required />
+              <input type="number" id="campo-valor-nf" min="0.01" step="0.01" required autocomplete="off" />
             </div>
 
             <div class="campo-duplo">
               <div class="campo">
                 <label for="campo-data-emissao">Data de Emissão</label>
-                <input type="date" id="campo-data-emissao" required />
+                <input type="date" id="campo-data-emissao" required autocomplete="off" />
               </div>
               <div class="campo">
                 <label for="campo-data-vencimento">Data de Vencimento</label>
-                <input type="date" id="campo-data-vencimento" required />
+                <input type="date" id="campo-data-vencimento" required autocomplete="off" />
               </div>
             </div>
 
@@ -188,7 +188,7 @@
 
             <div class="campo" id="grupo-observacao" style="display:none">
               <label for="campo-observacao">Observação (obrigatória em caso de divergência)</label>
-              <textarea id="campo-observacao" rows="3"></textarea>
+              <textarea id="campo-observacao" rows="3" autocomplete="off"></textarea>
             </div>
 
             <button type="submit" class="botao-primario">Salvar lançamento</button>
@@ -227,22 +227,22 @@
             <div class="campo-duplo">
               <div class="campo">
                 <label for="rat-nf-numero">Número da NF</label>
-                <input type="text" id="rat-nf-numero" />
+                <input type="text" id="rat-nf-numero" autocomplete="off" />
               </div>
               <div class="campo">
                 <label for="rat-valor-total">Valor Total da NF (R$)</label>
-                <input type="number" id="rat-valor-total" min="0.01" step="0.01" />
+                <input type="number" id="rat-valor-total" min="0.01" step="0.01" autocomplete="off" />
               </div>
             </div>
 
             <div class="campo-duplo">
               <div class="campo">
                 <label for="rat-data-emissao">Data de Emissão</label>
-                <input type="date" id="rat-data-emissao" />
+                <input type="date" id="rat-data-emissao" autocomplete="off" />
               </div>
               <div class="campo">
                 <label for="rat-data-vencimento">Data de Vencimento</label>
-                <input type="date" id="rat-data-vencimento" />
+                <input type="date" id="rat-data-vencimento" autocomplete="off" />
               </div>
             </div>
 
@@ -279,15 +279,15 @@
         <header><h2>Ordens de Pagamento</h2></header>
 
         <div class="grid-duas-colunas" style="margin-bottom: var(--space-6)">
-          <form id="form-ordem-pagamento" class="cartao-form">
+          <form id="form-ordem-pagamento" class="cartao-form" autocomplete="off">
             <div class="campo-duplo">
               <div class="campo">
                 <label for="op-numero-solicitacao">Nº da Solicitação</label>
-                <input type="text" id="op-numero-solicitacao" required />
+                <input type="text" id="op-numero-solicitacao" required autocomplete="off" />
               </div>
               <div class="campo">
                 <label for="op-numero-op">Nº da Ordem de Pagamento</label>
-                <input type="text" id="op-numero-op" required />
+                <input type="text" id="op-numero-op" required autocomplete="off" />
               </div>
             </div>
 
@@ -330,7 +330,7 @@
 
             <div class="campo">
               <label for="op-saldo-total">Saldo Total (R$)</label>
-              <input type="number" id="op-saldo-total" min="0.01" step="0.01" required />
+              <input type="number" id="op-saldo-total" min="0.01" step="0.01" required autocomplete="off" />
             </div>
 
             <button type="submit" class="botao-primario">Registrar Ordem de Pagamento</button>
@@ -341,7 +341,7 @@
             <h3>Buscar / Filtrar</h3>
             <div class="campo">
               <label for="op-busca-texto">Nº OP, Nº Solicitação ou Conta</label>
-              <input type="text" id="op-busca-texto" placeholder="Digite para filtrar..." />
+              <input type="text" id="op-busca-texto" placeholder="Digite para filtrar..." autocomplete="off" />
             </div>
             <div class="campo">
               <label for="op-filtro-centro">Centro de Custo</label>
@@ -361,12 +361,12 @@
         <header><h2>Orçamento &amp; Contas</h2></header>
 
         <div class="grid-duas-colunas" style="margin-bottom: var(--space-6)">
-          <form id="form-novo-centro" class="cartao-form">
+          <form id="form-novo-centro" class="cartao-form" autocomplete="off">
             <h3 style="margin-bottom: var(--space-3)">Novo Centro de Custo</h3>
             <div class="campo-duplo">
               <div class="campo">
                 <label for="orc-novo-centro-nome">Nome</label>
-                <input type="text" id="orc-novo-centro-nome" />
+                <input type="text" id="orc-novo-centro-nome" autocomplete="off" />
               </div>
               <div class="campo">
                 <label for="orc-novo-centro-tipo">Gestão</label>
@@ -416,7 +416,7 @@
           </div>
           <p id="orc-status-conta" class="form-status" role="status"></p>
         </div>
-        <form id="form-conta-contabil"></form>
+        <form id="form-conta-contabil" autocomplete="off"></form>
 
         <div id="orc-lista-contas"></div>
 
@@ -428,7 +428,7 @@
             <h3 id="orc-servico-titulo-form" style="margin-bottom: var(--space-3)">Novo Serviço/Prestador</h3>
             <div class="campo">
               <label for="orc-servico-nome">Nome</label>
-              <input type="text" id="orc-servico-nome" />
+              <input type="text" id="orc-servico-nome" autocomplete="off" />
             </div>
             <label style="font-size: var(--text-xs); font-weight: 600; text-transform: uppercase; letter-spacing: 0.03em; color: var(--ink-700)">Orçamento Projetado por mês (R$)</label>
             <div id="orc-servico-grade-container"></div>
@@ -438,7 +438,7 @@
             </div>
             <p id="orc-status-servico" class="form-status" role="status"></p>
           </div>
-          <form id="form-servico"></form>
+          <form id="form-servico" autocomplete="off"></form>
 
           <div id="orc-lista-servicos"></div>
         </div>
@@ -471,7 +471,7 @@
           Só e-mails cadastrados aqui conseguem entrar no Bills. A trava de verdade está nas Regras do Firestore — isto aqui é o cadastro que elas consultam.
         </p>
 
-        <form id="form-usuario" class="cartao-form" style="max-width: 640px; margin-bottom: var(--space-6)">
+        <form id="form-usuario" class="cartao-form" style="max-width: 640px; margin-bottom: var(--space-6)" autocomplete="off">
           <h3 id="usr-titulo" style="margin-bottom: var(--space-3)">Autorizar novo e-mail</h3>
           <div class="campo-duplo">
             <div class="campo">

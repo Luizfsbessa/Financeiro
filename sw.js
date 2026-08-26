@@ -6,7 +6,7 @@
 // persistência offline própria, cuidada pelo próprio SDK do Firebase.
 // ============================================================
 
-const CACHE_NOME = "bills-conciliacao-shell-v24";
+const CACHE_NOME = "bills-conciliacao-shell-v25";
 
 const ARQUIVOS_DO_SHELL = [
   "./",
