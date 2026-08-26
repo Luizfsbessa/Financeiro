@@ -21,6 +21,7 @@ import {
 import { processarLancamento } from "./conciliacao.js";
 import { dadosDoLancador } from "./auth.js";
 import { invalidarDashboard, invalidarPainelTerceiros } from "./dashboard.js";
+import { montarLinkMovidesk } from "./integracoes.js";
 
 const formatadorRS = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" });
 
@@ -36,6 +37,14 @@ export function iniciarRateio(user) {
   listenersConectados = true;
 
   document.getElementById("rat-valor-total")?.addEventListener("input", recalcularTotais);
+
+  const inputProtocoloRateio = document.getElementById("rat-protocolo-movidesk");
+  const linkMovideskRateio = document.getElementById("rat-link-movidesk");
+  inputProtocoloRateio?.addEventListener("input", () => {
+    const link = montarLinkMovidesk(inputProtocoloRateio.value);
+    linkMovideskRateio.hidden = !link;
+    if (link) linkMovideskRateio.href = link;
+  });
 
   conectarToggleModo();
   conectarBuscaConta();
@@ -261,6 +270,7 @@ async function salvarRateio() {
   const codigo = document.getElementById("rat-conta-codigo").value.trim();
   const selOP = document.getElementById("rat-ordem-pagamento");
   const nfNumero = document.getElementById("rat-nf-numero").value.trim();
+  const protocoloMovidesk = document.getElementById("rat-protocolo-movidesk").value.trim() || null;
   const valorTotal = parseFloat(document.getElementById("rat-valor-total").value);
   const dataEmissaoStr = document.getElementById("rat-data-emissao").value;
   const dataVencimentoStr = document.getElementById("rat-data-vencimento").value;
@@ -345,6 +355,7 @@ async function salvarRateio() {
         valor_nf: valorLinha,
         data_emissao: dataEmissao,
         data_vencimento: dataVencimento,
+        protocolo_movidesk: protocoloMovidesk,
         observacao: `Rateio da NF ${nfNumero || "—"} (${percentual.toFixed(4)}% do total ${formatadorRS.format(valorTotal)}).`,
         ...calculado,
       };
@@ -362,6 +373,8 @@ async function salvarRateio() {
     document.getElementById("rat-valor-total").value = "";
     document.getElementById("rat-data-emissao").value = "";
     document.getElementById("rat-data-vencimento").value = "";
+    document.getElementById("rat-protocolo-movidesk").value = "";
+    document.getElementById("rat-link-movidesk").hidden = true;
     recalcularTotais();
   } catch (erro) {
     console.error("[rateio] erro ao salvar:", erro);

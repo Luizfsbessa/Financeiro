@@ -16,6 +16,7 @@ import {
 import { processarLancamento } from "./conciliacao.js";
 import { dadosDoLancador } from "./auth.js";
 import { invalidarDashboard, invalidarPainelTerceiros } from "./dashboard.js";
+import { montarLinkMovidesk } from "./integracoes.js";
 
 const formatadorRS = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" });
 const formatadorData = new Intl.DateTimeFormat("pt-BR");
@@ -41,8 +42,16 @@ export async function iniciarFormLancamento(user) {
   const inputVencimento = document.getElementById("campo-data-vencimento");
   const campoObservacao = document.getElementById("campo-observacao");
   const grupoObservacao = document.getElementById("grupo-observacao");
+  const inputProtocoloMovidesk = document.getElementById("campo-protocolo-movidesk");
+  const linkMovidesk = document.getElementById("link-movidesk");
   const preview = document.getElementById("preview-conciliacao");
   const mensagemStatus = document.getElementById("form-lancamento-status");
+
+  inputProtocoloMovidesk.addEventListener("input", () => {
+    const link = montarLinkMovidesk(inputProtocoloMovidesk.value);
+    linkMovidesk.hidden = !link;
+    if (link) linkMovidesk.href = link;
+  });
 
   // --- Popular Centros de Custo ---
   try {
@@ -241,6 +250,7 @@ export async function iniciarFormLancamento(user) {
           valor_nf: valorNF,
           data_emissao: dataEmissao,
           data_vencimento: dataVencimento,
+          protocolo_movidesk: inputProtocoloMovidesk.value.trim() || null,
           observacao: campoObservacao.value.trim(),
           ...calculado,
         },
@@ -253,6 +263,7 @@ export async function iniciarFormLancamento(user) {
       limparSelect(selConta, "Selecione a Conta Contábil");
       limparSelect(selServico, "Selecione o Serviço/Prestador");
       limparSelect(selOP, "Selecione o Serviço/Prestador primeiro");
+      linkMovidesk.hidden = true;
       atualizarPreview(null);
       invalidarDashboard();
       invalidarPainelTerceiros();

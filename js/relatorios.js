@@ -8,6 +8,7 @@
 
 import { listarCentrosCusto, listarTodasContas, listarLancamentosPorConta, listarTodosLancamentos, listarOrdensPagamento } from "./firestore.js";
 import { exportarExcel, exportarPDF } from "./exportadores.js";
+import { montarLinkMovidesk } from "./integracoes.js";
 
 const formatadorRS = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" });
 const formatadorData = new Intl.DateTimeFormat("pt-BR");
@@ -105,12 +106,13 @@ async function montarRelatorioDivergencias() {
         "Divergência R$": formatadorRS.format(l.divergencia_rs ?? 0),
         "Divergência %": ((l.divergencia_pct ?? 0) * 100).toFixed(1) + "%",
         "Data Emissão": dataEmissao ? formatadorData.format(dataEmissao) : "—",
+        "Movidesk": montarLinkMovidesk(l.protocolo_movidesk) ?? "—",
         "Observação": l.observacao || "—",
       };
     })
     .sort((a, b) => b._ordenar - a._ordenar);
 
-  const colunas = ["Centro de Custo", "Conta Contábil", "Serviço/Prestador", "NF", "Valor NF", "Divergência R$", "Divergência %", "Data Emissão", "Observação"];
+  const colunas = ["Centro de Custo", "Conta Contábil", "Serviço/Prestador", "NF", "Valor NF", "Divergência R$", "Divergência %", "Data Emissão", "Movidesk", "Observação"];
   return { titulo: `Divergências (${linhas.length} lançamentos)`, arquivo: "divergencias", colunas, linhas };
 }
 
@@ -197,7 +199,18 @@ function renderizarTabela(container, relatorio) {
 
   const cabecalho = relatorio.colunas.map((c) => `<th>${c}</th>`).join("");
   const linhasHtml = relatorio.linhas
-    .map((linha) => `<tr>${relatorio.colunas.map((c) => `<td>${linha[c] ?? "—"}</td>`).join("")}</tr>`)
+    .map(
+      (linha) =>
+        `<tr>${relatorio.colunas
+          .map((c) => {
+            const valor = linha[c] ?? "—";
+            if (c === "Movidesk" && typeof valor === "string" && valor.startsWith("http")) {
+              return `<td><a href="${valor}" target="_blank" rel="noopener" class="link-movidesk">Abrir ↗</a></td>`;
+            }
+            return `<td>${valor}</td>`;
+          })
+          .join("")}</tr>`
+    )
     .join("");
 
   container.innerHTML = `
