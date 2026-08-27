@@ -10,6 +10,77 @@
   border-radius: var(--radius-md);
 }
 
+/* Scrollbars mais grossas e visíveis (Chrome/Edge/Safari + Firefox) */
+.tabela-scroll,
+.scroll-topo {
+  scrollbar-width: auto;
+  scrollbar-color: var(--brass-500) var(--paper-0);
+}
+.tabela-scroll::-webkit-scrollbar,
+.scroll-topo::-webkit-scrollbar {
+  height: 14px;
+}
+.tabela-scroll::-webkit-scrollbar-track,
+.scroll-topo::-webkit-scrollbar-track {
+  background: var(--paper-0);
+}
+.tabela-scroll::-webkit-scrollbar-thumb,
+.scroll-topo::-webkit-scrollbar-thumb {
+  background: var(--brass-500);
+  border-radius: 7px;
+  border: 3px solid var(--paper-0);
+}
+
+/* Barra de rolagem "espelho", fina e grudada no topo — sincronizada por JS
+   com a rolagem real da tabela. Resolve o problema de precisar descer até
+   o fim de uma tabela gigante só pra conseguir arrastar ela pros lados. */
+.scroll-topo {
+  position: sticky;
+  top: 0;
+  z-index: 6;
+  overflow-x: auto;
+  overflow-y: hidden;
+  height: 14px;
+  background: var(--paper-0);
+  border: 1px solid var(--line-100);
+  border-bottom: none;
+  border-radius: var(--radius-md) var(--radius-md) 0 0;
+}
+.scroll-topo-interno {
+  height: 1px;
+}
+.scroll-topo + .tabela-scroll {
+  border-top: none;
+  border-radius: 0 0 var(--radius-md) var(--radius-md);
+}
+
+/* --- Filtros do Painel (Ano / Centro de Custo / Usuário) --- */
+.painel-filtros {
+  display: flex;
+  gap: var(--space-4);
+  flex-wrap: wrap;
+  margin-bottom: var(--space-4);
+}
+.painel-filtros .campo {
+  min-width: 200px;
+  margin-bottom: 0;
+}
+.painel-filtros label {
+  font-size: var(--text-xs);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--ink-700);
+}
+.painel-filtros select {
+  width: 100%;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--line-100);
+  border-radius: var(--radius-sm);
+  background: var(--paper-1);
+  font-size: var(--text-sm);
+}
+
 .tabela-matriz {
   border-collapse: collapse;
   width: 100%;
@@ -32,7 +103,9 @@
   font-weight: 600;
   background: var(--paper-0);
   position: sticky;
-  top: 0;
+  /* 14px = altura de .scroll-topo — sem isso, os dois brigam pela mesma
+     posição (top: 0) e a barra de scroll acaba tampando o cabeçalho. */
+  top: 14px;
   z-index: 3;
 }
 
