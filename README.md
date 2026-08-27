@@ -84,6 +84,7 @@ vitale-conciliacao/
 │   ├── relatorios.js          → 4 relatórios + exportação Excel/PDF
 │   ├── exportadores.js        → exportação genérica (Excel via SheetJS, PDF via jsPDF)
 │   ├── usuarios.js             → cadastro de e-mails autorizados e papéis
+│   ├── integracoes.js          → link direto pro ticket do Movidesk
 │   ├── seed-dados-exemplo.js → dados de teste (usar só em desenvolvimento)
 │   └── app.js                → liga autenticação, roteamento de abas e módulos
 └── icons/               → ícones do PWA (192x192 e 512x512 — adicionar depois)
@@ -198,6 +199,26 @@ Errar a ordem aqui te tranca pra fora do próprio app. Siga exatamente assim:
 5. Se algo travar: o arquivo `firestore.rules.PERMISSIVO-BACKUP` (nesta mesma pasta) tem as regras antigas — cole ele de volta nas Regras do Console pra reabrir tudo enquanto investiga com calma.
 
 Depois disso funcionando, todo o resto de cadastro de usuário (adicionar Financeiro, Leitura, desativar acesso) é feito direto pela tela "Usuários & Permissões" do app — não precisa mais voltar no Console.
+
+## Integração com Movidesk
+
+Lançamento único e Rateio agora têm um campo opcional "Protocolo Movidesk" — ao digitar, aparece um link "Abrir ticket no Movidesk ↗" que já monta a URL certa (`https://frescattocompany.movidesk.com/Ticket/EditByProtocol/{protocolo}`) e abre numa aba nova. O protocolo fica gravado no lançamento (campo `protocolo_movidesk`), e o relatório de **Divergências** já mostra uma coluna "Movidesk" clicável pra cada lançamento que tiver protocolo preenchido.
+
+A URL base está centralizada em `js/integracoes.js` — se a Frescatto trocar de plataforma de tickets um dia, só precisa mudar num lugar só.
+
+## Autocomplete do navegador desativado
+
+Todo campo de texto, número, data, `<textarea>` e `<form>` do app tem `autocomplete="off"` — evita que o navegador sugira ou preencha sozinho um valor de uma entrada anterior (foi exatamente isso que causou aquele bug do código da conta puxando um valor antigo, lá na tela de Orçamento & Contas). Checkboxes ficaram de fora de propósito — não sofrem autofill do mesmo jeito.
+
+> Nota: alguns navegadores (principalmente Chrome) ignoram `autocomplete="off"` especificamente pra campos de login/senha, mas respeitam normalmente pra campos genéricos como os deste app — então a proteção vale pra praticamente tudo aqui.
+
+## Filtros no Painel e Barra de Scroll Dupla
+
+**Filtros (Ano, Centro de Custo, Usuário):** Painel e Centros de Terceiros agora têm três filtros no topo, combináveis entre si. Os dados brutos (lançamentos e serviços de cada conta) são buscados uma vez só e guardados em memória — trocar de filtro reprocessa tudo na hora, sem bater no Firestore de novo a cada clique.
+
+> ⚠️ **Limitação que vale saber:** o filtro de Ano usa a Data de Emissão de cada lançamento pra determinar o ano — isso é confiável. Mas o campo `mes_referencia` (usado pra decidir em qual coluna Jan-Dez cada valor cai) guarda só o número do mês, sem o ano. Ou seja, um lançamento de Janeiro/2025 e outro de Janeiro/2026 caem os dois na coluna "Jan" — o filtro de Ano restringe **quais lançamentos entram na conta**, mas a coluna do mês em si não é ano-específica. Na prática isso já funciona bem pra filtrar "só 2026", mas se um dia for preciso comparar Jan/2025 vs Jan/2026 lado a lado na mesma tabela, essa parte do modelo de dados precisa de um ajuste (guardar ano+mês juntos, não só o mês).
+
+**Barra de scroll dupla:** Painel, Centros de Terceiros e Relatórios agora têm uma barrinha de rolagem horizontal fixa no topo (gruda ao rolar a página), sincronizada com a rolagem real da tabela — não precisa mais descer até o fim de uma tabela grande só pra conseguir arrastar ela pros lados. As scrollbars também ficaram mais grossas e coloridas pra serem mais fáceis de pegar visualmente.
 
 ## Próximos módulos (ainda não construídos)
 
