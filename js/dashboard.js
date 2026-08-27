@@ -1,7 +1,7 @@
 // ============================================================
 // dashboard.js
-// Motor de tabela matriz Centro de Custo → Conta Contábil, com
-// Jan–Dez, acumulados e heatmap de Index%. Reutilizado por DUAS
+// Motor de tabela matriz Centro de Custo → Conta Contábil → Serviço,
+// com Jan–Dez, acumulados e heatmap de Index%. Reutilizado por DUAS
 // telas diferentes:
 //   - Painel (própio):        iniciarDashboard() / invalidarDashboard()
 //   - Centros de Terceiros:   iniciarPainelTerceiros() / invalidarPainelTerceiros()
@@ -9,6 +9,11 @@
 // filtrando por tipo_gestao e apontando para containers diferentes.
 // Centros sem tipo_gestao definido são tratados como "proprio" —
 // isso preserva dados antigos criados antes desse campo existir.
+//
+// FILTROS (Ano, Centro de Custo, Usuário): os dados brutos (lançamentos
+// e serviços de cada conta) são buscados uma vez e guardados em cache
+// por containerId — trocar de filtro só reprocessa em memória, sem
+// bater no Firestore de novo a cada clique.
 //
 // Regra do heatmap (igual ao Looker Studio que desenhamos):
 //   Index <= 95%           → verde
@@ -24,6 +29,14 @@ const CHAVES_MES = ["jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set
 const formatadorRS = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 });
 
 const estadoCarregado = new Map(); // containerId -> boolean
+const cachePainel = new Map(); // containerId -> { centros, contasComDados }
+const filtrosAtuais = new Map(); // containerId -> { ano, centroId, usuarioEmail }
+
+function aDate(valor) {
+  if (!valor) return null;
+  if (typeof valor.toDate === "function") return valor.toDate();
+  return new Date(valor);
+}
 
 async function iniciarPainelMatriz({ containerId, filtroTipoGestao, mensagemVazio }) {
   const container = document.getElementById(containerId);
@@ -44,38 +57,33 @@ async function iniciarPainelMatriz({ containerId, filtroTipoGestao, mensagemVazi
       return;
     }
 
-    const linhas = await Promise.all(
+    const contasComDados = await Promise.all(
       contas.map(async (conta) => {
         const [lancamentos, servicos] = await Promise.all([
           listarLancamentosPorConta(conta.id),
           listarServicosPorConta(conta.id),
         ]);
-        const realizadoPorMes = agregarRealizadoPorMes(lancamentos);
         const centro = centros.find((c) => c.id === conta.centro_custo_id);
-
-        const lancamentosPorServico = new Map();
-        lancamentos.forEach((l) => {
-          const chave = l.servico_id || "_sem_servico";
-          if (!lancamentosPorServico.has(chave)) lancamentosPorServico.set(chave, []);
-          lancamentosPorServico.get(chave).push(l);
-        });
-
-        const servicosDetalhe = servicos.map((servico) => ({
-          servico,
-          realizadoPorMes: agregarRealizadoPorMes(lancamentosPorServico.get(servico.id) || []),
-        }));
-
-        return { conta, centro, realizadoPorMes, servicosDetalhe };
+        return { conta, centro, lancamentos, servicos };
       })
     );
 
-    renderizarTabela(container, centros, linhas);
+    cachePainel.set(containerId, { centros, contasComDados });
+    if (!filtrosAtuais.has(containerId)) {
+      filtrosAtuais.set(containerId, { ano: "", centroId: "", usuarioEmail: "" });
+    }
     estadoCarregado.set(containerId, true);
+
+    montarEstruturaBase(container, containerId);
+    renderizarFiltros(containerId);
+    atualizarCorpo(containerId);
   } catch (erro) {
     console.error(`Erro ao carregar painel (${containerId}):`, erro);
     container.innerHTML = `<div class="placeholder-modulo">Não foi possível carregar. Erro: ${erro.message || "veja o console (F12)"}.</div>`;
   }
 }
+
+// --- Painel (Centros próprios) ---
 
 export async function iniciarDashboard() {
   await iniciarPainelMatriz({
@@ -93,6 +101,8 @@ export function dashboardJaCarregado() {
   return estadoCarregado.get("dashboard-conteudo") === true;
 }
 
+// --- Centros de Terceiros ---
+
 export async function iniciarPainelTerceiros() {
   await iniciarPainelMatriz({
     containerId: "terceiros-conteudo",
@@ -108,6 +118,121 @@ export function invalidarPainelTerceiros() {
 export function painelTerceirosJaCarregado() {
   return estadoCarregado.get("terceiros-conteudo") === true;
 }
+
+// --- Estrutura base: filtros (fixos) + corpo (recalculado a cada filtro) ---
+
+function montarEstruturaBase(container, containerId) {
+  container.innerHTML = `
+    <div id="${containerId}-filtros" class="painel-filtros"></div>
+    <div id="${containerId}-corpo"></div>
+  `;
+}
+
+function renderizarFiltros(containerId) {
+  const cache = cachePainel.get(containerId);
+  const filtroEl = document.getElementById(`${containerId}-filtros`);
+  if (!cache || !filtroEl) return;
+
+  const anosDisponiveis = new Set();
+  const usuariosDisponiveis = new Map(); // email -> nome
+
+  cache.contasComDados.forEach(({ lancamentos }) => {
+    lancamentos.forEach((l) => {
+      const data = aDate(l.data_emissao);
+      if (data) anosDisponiveis.add(data.getFullYear());
+      if (l.usuario_email) usuariosDisponiveis.set(l.usuario_email, l.usuario_nome || l.usuario_email);
+    });
+  });
+
+  const anosOrdenados = [...anosDisponiveis].sort((a, b) => b - a);
+  const usuariosOrdenados = [...usuariosDisponiveis.entries()].sort((a, b) => a[1].localeCompare(b[1]));
+  const filtro = filtrosAtuais.get(containerId);
+
+  filtroEl.innerHTML = `
+    <div class="campo">
+      <label for="${containerId}-filtro-ano">Ano</label>
+      <select id="${containerId}-filtro-ano">
+        <option value="">Todos os anos</option>
+        ${anosOrdenados.map((ano) => `<option value="${ano}" ${String(ano) === filtro.ano ? "selected" : ""}>${ano}</option>`).join("")}
+      </select>
+    </div>
+    <div class="campo">
+      <label for="${containerId}-filtro-centro">Centro de Custo</label>
+      <select id="${containerId}-filtro-centro">
+        <option value="">Todos os Centros de Custo</option>
+        ${cache.centros
+          .slice()
+          .sort((a, b) => a.nome.localeCompare(b.nome))
+          .map((c) => `<option value="${c.id}" ${c.id === filtro.centroId ? "selected" : ""}>${c.nome}</option>`)
+          .join("")}
+      </select>
+    </div>
+    <div class="campo">
+      <label for="${containerId}-filtro-usuario">Usuário</label>
+      <select id="${containerId}-filtro-usuario">
+        <option value="">Todos os usuários</option>
+        ${usuariosOrdenados.map(([email, nome]) => `<option value="${email}" ${email === filtro.usuarioEmail ? "selected" : ""}>${nome}</option>`).join("")}
+      </select>
+    </div>
+  `;
+
+  document.getElementById(`${containerId}-filtro-ano`).addEventListener("change", (e) => {
+    filtrosAtuais.get(containerId).ano = e.target.value;
+    atualizarCorpo(containerId);
+  });
+  document.getElementById(`${containerId}-filtro-centro`).addEventListener("change", (e) => {
+    filtrosAtuais.get(containerId).centroId = e.target.value;
+    atualizarCorpo(containerId);
+  });
+  document.getElementById(`${containerId}-filtro-usuario`).addEventListener("change", (e) => {
+    filtrosAtuais.get(containerId).usuarioEmail = e.target.value;
+    atualizarCorpo(containerId);
+  });
+}
+
+function atualizarCorpo(containerId) {
+  const cache = cachePainel.get(containerId);
+  const corpoEl = document.getElementById(`${containerId}-corpo`);
+  if (!cache || !corpoEl) return;
+
+  const { ano, centroId, usuarioEmail } = filtrosAtuais.get(containerId);
+
+  const linhas = cache.contasComDados
+    .filter(({ centro }) => !centroId || centro?.id === centroId)
+    .map(({ conta, centro, lancamentos, servicos }) => {
+      const lancamentosFiltrados = lancamentos.filter((l) => {
+        if (ano) {
+          const data = aDate(l.data_emissao);
+          if (!data || String(data.getFullYear()) !== ano) return false;
+        }
+        if (usuarioEmail && l.usuario_email !== usuarioEmail) return false;
+        return true;
+      });
+
+      const realizadoPorMes = agregarRealizadoPorMes(lancamentosFiltrados);
+
+      const lancamentosPorServico = new Map();
+      lancamentosFiltrados.forEach((l) => {
+        const chave = l.servico_id || "_sem_servico";
+        if (!lancamentosPorServico.has(chave)) lancamentosPorServico.set(chave, []);
+        lancamentosPorServico.get(chave).push(l);
+      });
+
+      const servicosDetalhe = servicos.map((servico) => ({
+        servico,
+        realizadoPorMes: agregarRealizadoPorMes(lancamentosPorServico.get(servico.id) || []),
+      }));
+
+      return { conta, centro, realizadoPorMes, servicosDetalhe };
+    });
+
+  const centrosFiltrados = centroId ? cache.centros.filter((c) => c.id === centroId) : cache.centros;
+
+  renderizarTabela(corpoEl, centrosFiltrados, linhas);
+  ativarScrollDuplo(corpoEl);
+}
+
+// --- Compartilhado ---
 
 function agregarRealizadoPorMes(lancamentos) {
   const totais = Array(12).fill(0);
@@ -131,6 +256,36 @@ function classificarIndexCentro(indexPct) {
   return "heat-centro-vermelho";
 }
 
+/**
+ * Sincroniza uma barra de rolagem horizontal fina e fixa no topo (que fica
+ * "grudada" ao rolar a página, position: sticky) com a rolagem real da
+ * tabela — evita ter que descer até o fim de uma tabela gigante só pra
+ * conseguir puxar ela pros lados.
+ */
+function ativarScrollDuplo(corpoEl) {
+  const scrollTopo = corpoEl.querySelector(".scroll-topo");
+  const scrollTopoInterno = corpoEl.querySelector(".scroll-topo-interno");
+  const tabelaScroll = corpoEl.querySelector(".tabela-scroll");
+  const tabela = tabelaScroll?.querySelector("table");
+  if (!scrollTopo || !scrollTopoInterno || !tabelaScroll || !tabela) return;
+
+  scrollTopoInterno.style.width = tabela.scrollWidth + "px";
+
+  let sincronizando = false;
+  scrollTopo.addEventListener("scroll", () => {
+    if (sincronizando) return;
+    sincronizando = true;
+    tabelaScroll.scrollLeft = scrollTopo.scrollLeft;
+    sincronizando = false;
+  });
+  tabelaScroll.addEventListener("scroll", () => {
+    if (sincronizando) return;
+    sincronizando = true;
+    scrollTopo.scrollLeft = tabelaScroll.scrollLeft;
+    sincronizando = false;
+  });
+}
+
 function renderizarTabela(container, centros, linhas) {
   const gruposPorCentro = centros
     .map((centro) => {
@@ -148,7 +303,6 @@ function renderizarTabela(container, centros, linhas) {
 
       return { centro, contasDoGrupo, somaRealizadoPorMes, somaRealizado, somaAprovado };
     })
-    // Prioriza quem tem mais orçamento em jogo — "big numbers" primeiro.
     .sort((a, b) => b.somaAprovado - a.somaAprovado);
 
   const cabecalhoMeses = NOMES_MES_ABREV.map((m) => `<th class="col-mes">${m}</th>`).join("");
@@ -234,6 +388,7 @@ function renderizarTabela(container, centros, linhas) {
     .join("");
 
   container.innerHTML = `
+    <div class="scroll-topo"><div class="scroll-topo-interno"></div></div>
     <div class="tabela-scroll">
       <table class="tabela-matriz">
         <thead>

@@ -215,10 +215,42 @@ function renderizarTabela(container, relatorio) {
 
   container.innerHTML = `
     <p style="color: var(--ink-400); font-size: var(--text-xs); margin-bottom: var(--space-2)">${relatorio.titulo}</p>
+    <div class="scroll-topo"><div class="scroll-topo-interno"></div></div>
     <div class="tabela-scroll">
       <table class="tabela-matriz">
         <thead><tr>${cabecalho}</tr></thead>
         <tbody>${linhasHtml}</tbody>
       </table>
     </div>`;
+
+  ativarScrollDuplo(container);
+}
+
+/**
+ * Mesma técnica usada no Painel — sincroniza uma barra de scroll fina e
+ * fixa no topo com a rolagem real da tabela, pra não precisar descer até
+ * o fim de uma tabela grande só pra conseguir arrastar ela pros lados.
+ */
+function ativarScrollDuplo(container) {
+  const scrollTopo = container.querySelector(".scroll-topo");
+  const scrollTopoInterno = container.querySelector(".scroll-topo-interno");
+  const tabelaScroll = container.querySelector(".tabela-scroll");
+  const tabela = tabelaScroll?.querySelector("table");
+  if (!scrollTopo || !scrollTopoInterno || !tabelaScroll || !tabela) return;
+
+  scrollTopoInterno.style.width = tabela.scrollWidth + "px";
+
+  let sincronizando = false;
+  scrollTopo.addEventListener("scroll", () => {
+    if (sincronizando) return;
+    sincronizando = true;
+    tabelaScroll.scrollLeft = scrollTopo.scrollLeft;
+    sincronizando = false;
+  });
+  tabelaScroll.addEventListener("scroll", () => {
+    if (sincronizando) return;
+    sincronizando = true;
+    scrollTopo.scrollLeft = tabelaScroll.scrollLeft;
+    sincronizando = false;
+  });
 }
