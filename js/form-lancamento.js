@@ -37,11 +37,10 @@ export async function iniciarFormLancamento(user) {
   const selConta = document.getElementById("campo-conta-contabil");
   const selServico = document.getElementById("campo-servico");
   const selOP = document.getElementById("campo-ordem-pagamento");
+  const inputNfNumero = document.getElementById("campo-nf-numero");
   const inputValor = document.getElementById("campo-valor-nf");
   const inputEmissao = document.getElementById("campo-data-emissao");
   const inputVencimento = document.getElementById("campo-data-vencimento");
-  const campoObservacao = document.getElementById("campo-observacao");
-  const grupoObservacao = document.getElementById("grupo-observacao");
   const inputProtocoloMovidesk = document.getElementById("campo-protocolo-movidesk");
   const linkMovidesk = document.getElementById("link-movidesk");
   const preview = document.getElementById("preview-conciliacao");
@@ -51,6 +50,51 @@ export async function iniciarFormLancamento(user) {
     const link = montarLinkMovidesk(inputProtocoloMovidesk.value);
     linkMovidesk.hidden = !link;
     if (link) linkMovidesk.href = link;
+  });
+
+  // --- Atalhos de teclado, pra agilizar digitação em lote ---
+  // Alt+N: reseta e volta o foco pro primeiro campo (começar um novo
+  // lançamento sem tirar a mão do teclado). Enter: avança pro próximo
+  // campo em vez de fazer nada. Ctrl+Enter: salva de qualquer campo.
+  const ORDEM_CAMPOS = [selCentro, selTipoLancamento, selConta, selServico, selOP, inputNfNumero, inputProtocoloMovidesk, inputValor, inputEmissao, inputVencimento];
+
+  document.addEventListener("keydown", (evento) => {
+    if (form.closest(".secao-conteudo")?.hidden) return; // só age com a aba de lançamento visível
+    if (document.getElementById("lancamento-modo-unico")?.hidden) return; // só no modo "Lançamento único"
+    if (evento.altKey && evento.key.toLowerCase() === "n") {
+      evento.preventDefault();
+      form.reset();
+      servicoSelecionado = null;
+      ordemPagamentoSelecionada = null;
+      limparSelect(selConta, "Selecione a Conta Contábil");
+      limparSelect(selServico, "Selecione o Serviço/Prestador");
+      limparSelect(selOP, "Selecione o Serviço/Prestador primeiro");
+      linkMovidesk.hidden = true;
+      atualizarPreview(null);
+      mensagemStatus.textContent = "";
+      selCentro.focus();
+    }
+  });
+
+  form.addEventListener("keydown", (evento) => {
+    if (evento.key !== "Enter") return;
+
+    if (evento.ctrlKey || evento.metaKey) {
+      evento.preventDefault();
+      form.requestSubmit();
+      return;
+    }
+
+    if (!ORDEM_CAMPOS.includes(evento.target)) return;
+    evento.preventDefault();
+
+    const indiceAtual = ORDEM_CAMPOS.indexOf(evento.target);
+    const proximoHabilitado = ORDEM_CAMPOS.slice(indiceAtual + 1).find((campo) => campo && !campo.disabled);
+    if (proximoHabilitado) {
+      proximoHabilitado.focus();
+    } else {
+      form.requestSubmit();
+    }
   });
 
   // --- Popular Centros de Custo ---
@@ -133,7 +177,6 @@ export async function iniciarFormLancamento(user) {
       dataEntrada: new Date(),
     });
 
-    grupoObservacao.style.display = resultado.status_divergencia === "COM_DIVERGENCIA" ? "block" : "none";
     atualizarPreview(resultado, orcamentoProjetado);
   }
 
@@ -217,6 +260,16 @@ export async function iniciarFormLancamento(user) {
       return;
     }
 
+    if (!inputNfNumero.value.trim()) {
+      mensagemStatus.textContent = "Informe o Número da Nota Fiscal.";
+      return;
+    }
+
+    if (!inputProtocoloMovidesk.value.trim()) {
+      mensagemStatus.textContent = "Informe o Protocolo Movidesk.";
+      return;
+    }
+
     const dataEmissao = new Date(inputEmissao.value + "T00:00:00");
     const dataVencimento = new Date(inputVencimento.value + "T00:00:00");
     const mes = dataEmissao.getMonth() + 1;
@@ -230,11 +283,6 @@ export async function iniciarFormLancamento(user) {
       dataEntrada: new Date(),
     });
 
-    if (calculado.status_divergencia === "COM_DIVERGENCIA" && !campoObservacao.value.trim()) {
-      mensagemStatus.textContent = "Este lançamento está com divergência — a observação é obrigatória.";
-      return;
-    }
-
     const botaoSalvar = form.querySelector('button[type="submit"]');
     botaoSalvar.disabled = true;
 
@@ -247,11 +295,11 @@ export async function iniciarFormLancamento(user) {
           servico_id: selServico.value,
           servico_nome: servicoSelecionado.nome,
           tipo_lancamento: selTipoLancamento.value,
+          nf_numero: inputNfNumero.value.trim(),
           valor_nf: valorNF,
           data_emissao: dataEmissao,
           data_vencimento: dataVencimento,
-          protocolo_movidesk: inputProtocoloMovidesk.value.trim() || null,
-          observacao: campoObservacao.value.trim(),
+          protocolo_movidesk: inputProtocoloMovidesk.value.trim(),
           ...calculado,
         },
         selOP.value

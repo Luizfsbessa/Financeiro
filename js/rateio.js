@@ -50,6 +50,56 @@ export function iniciarRateio(user) {
   conectarBuscaConta();
   conectarBotaoAdicionarLinha();
   conectarSalvar();
+  conectarAtalhosTeclado();
+}
+
+/**
+ * Mesmos atalhos do lançamento único, adaptados aos campos fixos do
+ * rateio (as linhas dinâmicas de Centro de Custo ficam fora do Enter-
+ * avança, pra não pular de um jeito confuso entre elas).
+ */
+function conectarAtalhosTeclado() {
+  const campoBusca = document.getElementById("rat-conta-codigo");
+  const camposOrdem = () =>
+    [
+      document.getElementById("rat-conta-codigo"),
+      document.getElementById("rat-ordem-pagamento"),
+      document.getElementById("rat-nf-numero"),
+      document.getElementById("rat-valor-total"),
+      document.getElementById("rat-protocolo-movidesk"),
+      document.getElementById("rat-data-emissao"),
+      document.getElementById("rat-data-vencimento"),
+    ].filter(Boolean);
+
+  document.addEventListener("keydown", (evento) => {
+    if (document.getElementById("lancamento-modo-rateio")?.hidden) return; // só no modo Rateio
+
+    if (evento.altKey && evento.key.toLowerCase() === "n") {
+      evento.preventDefault();
+      campoBusca?.focus();
+      return;
+    }
+
+    if (evento.key !== "Enter") return;
+
+    if (evento.ctrlKey || evento.metaKey) {
+      evento.preventDefault();
+      document.getElementById("rat-botao-salvar")?.click();
+      return;
+    }
+
+    const ordem = camposOrdem();
+    const indiceAtual = ordem.indexOf(evento.target);
+    if (indiceAtual === -1) return;
+    evento.preventDefault();
+
+    const proximoHabilitado = ordem.slice(indiceAtual + 1).find((campo) => !campo.disabled);
+    if (proximoHabilitado) {
+      proximoHabilitado.focus();
+    } else {
+      document.getElementById("rat-botao-salvar")?.click();
+    }
+  });
 }
 
 // --- Alternância entre "Lançamento único" e "Rateio" ---
@@ -270,7 +320,7 @@ async function salvarRateio() {
   const codigo = document.getElementById("rat-conta-codigo").value.trim();
   const selOP = document.getElementById("rat-ordem-pagamento");
   const nfNumero = document.getElementById("rat-nf-numero").value.trim();
-  const protocoloMovidesk = document.getElementById("rat-protocolo-movidesk").value.trim() || null;
+  const protocoloMovidesk = document.getElementById("rat-protocolo-movidesk").value.trim();
   const valorTotal = parseFloat(document.getElementById("rat-valor-total").value);
   const dataEmissaoStr = document.getElementById("rat-data-emissao").value;
   const dataVencimentoStr = document.getElementById("rat-data-vencimento").value;
@@ -278,6 +328,14 @@ async function salvarRateio() {
 
   if (!codigo || !selOP.value) {
     status.textContent = "Informe o código da conta e selecione a Ordem de Pagamento.";
+    return;
+  }
+  if (!nfNumero) {
+    status.textContent = "Informe o Número da Nota Fiscal.";
+    return;
+  }
+  if (!protocoloMovidesk) {
+    status.textContent = "Informe o Protocolo Movidesk.";
     return;
   }
   if (!valorTotal || valorTotal <= 0) {
