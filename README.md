@@ -220,6 +220,22 @@ Todo campo de texto, número, data, `<textarea>` e `<form>` do app tem `autocomp
 
 **Barra de scroll dupla:** Painel, Centros de Terceiros e Relatórios agora têm uma barrinha de rolagem horizontal fixa no topo (gruda ao rolar a página), sincronizada com a rolagem real da tabela — não precisa mais descer até o fim de uma tabela grande só pra conseguir arrastar ela pros lados. As scrollbars também ficaram mais grossas e coloridas pra serem mais fáceis de pegar visualmente.
 
+## Digitação em lote — atalhos de teclado e ajustes de campo
+
+**Atalhos** (Lançamento único e Rateio):
+- **Alt+N** — reseta o formulário e volta o foco pro primeiro campo, pra começar o próximo lançamento sem tirar a mão do teclado.
+- **Enter** — avança pro próximo campo em vez de não fazer nada (ou submeter o form sem querer). No Rateio, isso vale só pros campos fixos do topo — as linhas dinâmicas de Centro de Custo ficam fora, pra não pular de um jeito confuso entre elas.
+- **Ctrl+Enter** — salva o lançamento/rateio de qualquer campo, sem precisar clicar no botão.
+
+**Lançamento único:**
+- Campo **Observação** foi removido (não existe mais, nem a exigência dela em caso de divergência).
+- Novo campo **Número da Nota Fiscal** (obrigatório).
+- **Protocolo Movidesk** virou obrigatório (antes era opcional).
+
+**Rateio entre Centros de Custo:**
+- **Protocolo Movidesk** virou obrigatório.
+- Rótulos de "Código da Conta Contábil" e "Ordem de Pagamento" simplificados — os lembretes entre parênteses ("mesmo em todas as fatias", "(rateio)") saíram por serem redundantes com o resto da tela.
+
 ## Próximos módulos (ainda não construídos)
 
 - Upload de foto da NF (Storage) — adiado, veja a seção sobre o plano Blaze acima.

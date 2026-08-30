@@ -165,6 +165,11 @@
             </div>
 
             <div class="campo">
+              <label for="campo-nf-numero">Número da Nota Fiscal</label>
+              <input type="text" id="campo-nf-numero" required autocomplete="off" />
+            </div>
+
+            <div class="campo">
               <label for="campo-valor-nf">Valor da NF (R$)</label>
               <input type="number" id="campo-valor-nf" min="0.01" step="0.01" required autocomplete="off" />
             </div>
@@ -181,14 +186,9 @@
             </div>
 
             <div class="campo">
-              <label for="campo-protocolo-movidesk">Protocolo Movidesk (opcional)</label>
-              <input type="text" id="campo-protocolo-movidesk" autocomplete="off" placeholder="Ex.: 123456" />
+              <label for="campo-protocolo-movidesk">Protocolo Movidesk</label>
+              <input type="text" id="campo-protocolo-movidesk" required autocomplete="off" placeholder="Ex.: 123456" />
               <a id="link-movidesk" href="#" target="_blank" rel="noopener" class="link-movidesk" hidden>Abrir ticket no Movidesk ↗</a>
-            </div>
-
-            <div class="campo" id="grupo-observacao" style="display:none">
-              <label for="campo-observacao">Observação (obrigatória em caso de divergência)</label>
-              <textarea id="campo-observacao" rows="3" autocomplete="off"></textarea>
             </div>
 
             <button type="submit" class="botao-primario">Salvar lançamento</button>
@@ -212,12 +212,12 @@
 
             <div class="campo-duplo">
               <div class="campo" style="position: relative">
-                <label for="rat-conta-codigo">Código da Conta Contábil (mesmo em todas as fatias)</label>
+                <label for="rat-conta-codigo">Código da Conta Contábil</label>
                 <input type="text" id="rat-conta-codigo" autocomplete="off" placeholder="Ex.: 3200001" />
                 <div id="rat-conta-sugestoes" class="autocomplete-lista" hidden></div>
               </div>
               <div class="campo">
-                <label for="rat-ordem-pagamento">Ordem de Pagamento (rateio)</label>
+                <label for="rat-ordem-pagamento">Ordem de Pagamento</label>
                 <select id="rat-ordem-pagamento" disabled>
                   <option value="">Informe o código da conta primeiro</option>
                 </select>
@@ -247,8 +247,8 @@
             </div>
 
             <div class="campo">
-              <label for="rat-protocolo-movidesk">Protocolo Movidesk (opcional — mesmo em todas as fatias)</label>
-              <input type="text" id="rat-protocolo-movidesk" autocomplete="off" placeholder="Ex.: 123456" />
+              <label for="rat-protocolo-movidesk">Protocolo Movidesk (mesmo em todas as fatias)</label>
+              <input type="text" id="rat-protocolo-movidesk" required autocomplete="off" placeholder="Ex.: 123456" />
               <a id="rat-link-movidesk" href="#" target="_blank" rel="noopener" class="link-movidesk" hidden>Abrir ticket no Movidesk ↗</a>
             </div>
 
