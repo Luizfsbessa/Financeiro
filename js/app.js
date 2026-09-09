@@ -25,6 +25,12 @@ const appShell = document.getElementById("app-shell");
 const botaoEntrar = document.getElementById("botao-entrar-google");
 const botaoSair = document.getElementById("botao-sair");
 const loginErro = document.getElementById("login-erro");
+const gifAcessoNegado = document.getElementById("gif-acesso-negado");
+
+function mostrarErroLogin(mensagem, comGif = false) {
+  loginErro.textContent = mensagem;
+  gifAcessoNegado.hidden = !comGif;
+}
 const usuarioNomeEl = document.getElementById("usuario-nome");
 const usuarioFotoEl = document.getElementById("usuario-foto");
 const linksNav = document.querySelectorAll("#sidebar-nav a");
@@ -149,14 +155,14 @@ function mostrarLogin() {
 }
 
 botaoEntrar.addEventListener("click", async () => {
-  loginErro.textContent = "";
+  mostrarErroLogin("");
   botaoEntrar.disabled = true;
   try {
     await entrarComGoogle();
     // A UI é atualizada pelo observador abaixo, não é preciso fazer nada aqui.
   } catch (erro) {
     console.error("Falha no login:", erro);
-    loginErro.textContent = "Não foi possível entrar. Tente novamente.";
+    mostrarErroLogin("Não foi possível entrar. Tente novamente.");
   } finally {
     botaoEntrar.disabled = false;
   }
@@ -182,7 +188,7 @@ observarAutenticacao(async (user) => {
     if (!papel) {
       await sair();
       mostrarLogin();
-      loginErro.textContent = `O e-mail ${user.email} não está autorizado a acessar o Bills. Fale com o administrador.`;
+      mostrarErroLogin(`O e-mail ${user.email} não está autorizado a acessar o Bills. Fale com o administrador.`, true);
       return;
     }
     mostrarApp(user, papel);
@@ -190,7 +196,7 @@ observarAutenticacao(async (user) => {
     console.error("Erro ao verificar autorização:", erro);
     await sair();
     mostrarLogin();
-    loginErro.textContent = "Não foi possível confirmar sua autorização. Tente novamente.";
+    mostrarErroLogin("Não foi possível confirmar sua autorização. Tente novamente.");
   }
 });
 
