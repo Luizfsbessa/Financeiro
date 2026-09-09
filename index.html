@@ -42,6 +42,7 @@
       </button>
 
       <p class="login-erro" id="login-erro" role="alert"></p>
+      <img src="./assets/acesso-negado.gif" alt="Você não disse a palavra mágica!" id="gif-acesso-negado" class="gif-acesso-negado" hidden />
       <p class="login-rodape">Acesso restrito à administração e ao time financeiro.</p>
     </div>
   </div>
@@ -247,7 +248,7 @@
             </div>
 
             <div class="campo">
-              <label for="rat-protocolo-movidesk">Protocolo Movidesk</label>
+              <label for="rat-protocolo-movidesk">Protocolo Movidesk (mesmo em todas as fatias)</label>
               <input type="text" id="rat-protocolo-movidesk" required autocomplete="off" placeholder="Ex.: 123456" />
               <a id="rat-link-movidesk" href="#" target="_blank" rel="noopener" class="link-movidesk" hidden>Abrir ticket no Movidesk ↗</a>
             </div>
@@ -260,7 +261,7 @@
             <div id="rat-linhas"></div>
 
             <div class="preview-linha">
-              <span>Soma dos percentuais (deve fechar em 100%)</span>
+              <span>Soma dos percentuais (deve fechar em 100,0000%)</span>
               <strong class="numero-tabular" id="rat-soma-fracoes">0,0000%</strong>
             </div>
             <div class="preview-linha">
@@ -314,7 +315,7 @@
               </div>
 
               <div class="campo">
-                <label for="op-servico">Serviço/Prestador</label>
+                <label for="op-servico">Serviço/Prestador (a OP fica presa a esse fornecedor específico)</label>
                 <select id="op-servico" required disabled>
                   <option value="">Selecione a Conta Contábil primeiro</option>
                 </select>
@@ -323,7 +324,7 @@
 
             <div id="op-grupo-rateio" hidden>
               <div class="campo">
-                <label for="op-conta-codigo-rateio">Código da Conta Contábil</label>
+                <label for="op-conta-codigo-rateio">Código da Conta Contábil (mesmo em todas as fatias do rateio)</label>
                 <input type="text" id="op-conta-codigo-rateio" autocomplete="off" placeholder="Ex.: 3200001" />
               </div>
             </div>
