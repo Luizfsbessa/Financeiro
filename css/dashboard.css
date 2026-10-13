@@ -3,55 +3,42 @@
    e heatmap de Index% (mesma lógica de cor do Looker Studio)
    ============================================================ */
 
+/* .painel-corpo é o container flex que envolve a tabela dentro de cada
+   caixa de altura fixa (Painel / Terceiros / Relatórios) — a tabela em si
+   é quem rola, nos dois eixos, não a página. */
+.painel-corpo {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
 .tabela-scroll {
-  overflow-x: auto;
+  flex: 1;
+  min-height: 0;
+  overflow: auto; /* rolagem horizontal E vertical dentro da própria caixa */
   background: var(--paper-1);
   border: 1px solid var(--line-100);
   border-radius: var(--radius-md);
 }
 
 /* Scrollbars mais grossas e visíveis (Chrome/Edge/Safari + Firefox) */
-.tabela-scroll,
-.scroll-topo {
+.tabela-scroll {
   scrollbar-width: auto;
   scrollbar-color: var(--brass-500) var(--paper-0);
 }
-.tabela-scroll::-webkit-scrollbar,
-.scroll-topo::-webkit-scrollbar {
+.tabela-scroll::-webkit-scrollbar {
+  width: 14px;
   height: 14px;
 }
-.tabela-scroll::-webkit-scrollbar-track,
-.scroll-topo::-webkit-scrollbar-track {
+.tabela-scroll::-webkit-scrollbar-track {
   background: var(--paper-0);
 }
-.tabela-scroll::-webkit-scrollbar-thumb,
-.scroll-topo::-webkit-scrollbar-thumb {
+.tabela-scroll::-webkit-scrollbar-thumb {
   background: var(--brass-500);
   border-radius: 7px;
   border: 3px solid var(--paper-0);
-}
-
-/* Barra de rolagem "espelho", fina e grudada no topo — sincronizada por JS
-   com a rolagem real da tabela. Resolve o problema de precisar descer até
-   o fim de uma tabela gigante só pra conseguir arrastar ela pros lados. */
-.scroll-topo {
-  position: sticky;
-  top: 0;
-  z-index: 6;
-  overflow-x: auto;
-  overflow-y: hidden;
-  height: 14px;
-  background: var(--paper-0);
-  border: 1px solid var(--line-100);
-  border-bottom: none;
-  border-radius: var(--radius-md) var(--radius-md) 0 0;
-}
-.scroll-topo-interno {
-  height: 1px;
-}
-.scroll-topo + .tabela-scroll {
-  border-top: none;
-  border-radius: 0 0 var(--radius-md) var(--radius-md);
 }
 
 /* --- Filtros do Painel (Ano / Centro de Custo / Usuário) --- */
@@ -60,6 +47,7 @@
   gap: var(--space-4);
   flex-wrap: wrap;
   margin-bottom: var(--space-4);
+  flex-shrink: 0;
 }
 .painel-filtros .campo {
   min-width: 200px;
@@ -104,9 +92,7 @@
   background: var(--paper-0);
   padding: var(--space-3);
   position: sticky;
-  /* 14px = altura de .scroll-topo — sem isso, os dois brigam pela mesma
-     posição (top: 0) e a barra de scroll acaba tampando o cabeçalho. */
-  top: 14px;
+  top: 0;
   z-index: 3;
 }
 
@@ -187,10 +173,43 @@
 .linha-conta.expandido .icone-toggle {
   transform: rotate(90deg);
 }
+.linha-servico {
+  cursor: pointer;
+  user-select: none;
+}
 .linha-servico .col-conta {
   padding-left: 40px;
   color: var(--ink-700);
   font-size: var(--text-sm);
+}
+.linha-servico .icone-toggle {
+  margin-left: 4px;
+}
+.linha-servico.expandido .icone-toggle {
+  transform: rotate(90deg);
+}
+
+/* 4º nível: NF individual */
+.linha-nf .col-conta {
+  padding-left: 64px;
+  color: var(--ink-700);
+  font-size: var(--text-xs);
+  white-space: nowrap;
+}
+.linha-nf td {
+  background: var(--paper-0);
+}
+.linha-nf .col-conta {
+  background: var(--paper-0);
+}
+.nf-detalhe {
+  color: var(--ink-400);
+  margin-left: var(--space-2);
+}
+.linha-nf .chip,
+.linha-nf .link-movidesk {
+  margin-left: var(--space-2);
+  vertical-align: middle;
 }
 .icone-toggle {
   display: inline-block;
@@ -208,6 +227,7 @@
   flex-wrap: wrap;
   gap: var(--space-3);
   margin-top: var(--space-4);
+  flex-shrink: 0;
 }
 
 .dashboard-conteudo code {
@@ -216,4 +236,12 @@
   padding: 1px 6px;
   border-radius: var(--radius-sm);
   font-size: var(--text-xs);
+}
+
+/* Título do relatório, dentro da caixa de altura fixa de #relatorio-conteudo */
+.relatorio-titulo {
+  flex-shrink: 0;
+  color: var(--ink-400);
+  font-size: var(--text-xs);
+  margin-bottom: var(--space-2);
 }
