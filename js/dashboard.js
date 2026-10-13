@@ -22,11 +22,13 @@
 // ============================================================
 
 import { listarCentrosCusto, listarTodasContas, listarLancamentosPorConta, listarServicosPorConta } from "./firestore.js";
+import { montarLinkMovidesk } from "./integracoes.js";
 
 const NOMES_MES_ABREV = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
 const CHAVES_MES = ["jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez"];
 
 const formatadorRS = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 });
+const formatadorData = new Intl.DateTimeFormat("pt-BR");
 
 const estadoCarregado = new Map(); // containerId -> boolean
 const cachePainel = new Map(); // containerId -> { centros, contasComDados }
@@ -124,7 +126,7 @@ export function painelTerceirosJaCarregado() {
 function montarEstruturaBase(container, containerId) {
   container.innerHTML = `
     <div id="${containerId}-filtros" class="painel-filtros"></div>
-    <div id="${containerId}-corpo"></div>
+    <div id="${containerId}-corpo" class="painel-corpo"></div>
   `;
 }
 
@@ -218,10 +220,14 @@ function atualizarCorpo(containerId) {
         lancamentosPorServico.get(chave).push(l);
       });
 
-      const servicosDetalhe = servicos.map((servico) => ({
-        servico,
-        realizadoPorMes: agregarRealizadoPorMes(lancamentosPorServico.get(servico.id) || []),
-      }));
+      const servicosDetalhe = servicos.map((servico) => {
+        const lancamentosDoServico = lancamentosPorServico.get(servico.id) || [];
+        return {
+          servico,
+          realizadoPorMes: agregarRealizadoPorMes(lancamentosDoServico),
+          lancamentos: lancamentosDoServico,
+        };
+      });
 
       return { conta, centro, realizadoPorMes, servicosDetalhe };
     });
@@ -229,7 +235,6 @@ function atualizarCorpo(containerId) {
   const centrosFiltrados = centroId ? cache.centros.filter((c) => c.id === centroId) : cache.centros;
 
   renderizarTabela(corpoEl, centrosFiltrados, linhas);
-  ativarScrollDuplo(corpoEl);
 }
 
 // --- Compartilhado ---
@@ -254,36 +259,6 @@ function classificarIndexCentro(indexPct) {
   if (indexPct <= 95) return "heat-centro-verde";
   if (indexPct <= 100) return "heat-centro-amarelo";
   return "heat-centro-vermelho";
-}
-
-/**
- * Sincroniza uma barra de rolagem horizontal fina e fixa no topo (que fica
- * "grudada" ao rolar a página, position: sticky) com a rolagem real da
- * tabela — evita ter que descer até o fim de uma tabela gigante só pra
- * conseguir puxar ela pros lados.
- */
-function ativarScrollDuplo(corpoEl) {
-  const scrollTopo = corpoEl.querySelector(".scroll-topo");
-  const scrollTopoInterno = corpoEl.querySelector(".scroll-topo-interno");
-  const tabelaScroll = corpoEl.querySelector(".tabela-scroll");
-  const tabela = tabelaScroll?.querySelector("table");
-  if (!scrollTopo || !scrollTopoInterno || !tabelaScroll || !tabela) return;
-
-  scrollTopoInterno.style.width = tabela.scrollWidth + "px";
-
-  let sincronizando = false;
-  scrollTopo.addEventListener("scroll", () => {
-    if (sincronizando) return;
-    sincronizando = true;
-    tabelaScroll.scrollLeft = scrollTopo.scrollLeft;
-    sincronizando = false;
-  });
-  tabelaScroll.addEventListener("scroll", () => {
-    if (sincronizando) return;
-    sincronizando = true;
-    scrollTopo.scrollLeft = tabelaScroll.scrollLeft;
-    sincronizando = false;
-  });
 }
 
 function renderizarTabela(container, centros, linhas) {
@@ -355,7 +330,7 @@ function renderizarTabela(container, centros, linhas) {
           const linhasServico = servicosDetalhe.length === 0
             ? `<tr data-centro="${centro.id}" data-conta="${conta.id}" style="display:none"><td colspan="${5 + 12}" style="color: var(--ink-400); font-style: italic; padding-left: 32px">Nenhum Serviço cadastrado nesta conta ainda.</td></tr>`
             : servicosDetalhe
-                .map(({ servico, realizadoPorMes: realizadoServico }) => {
+                .map(({ servico, realizadoPorMes: realizadoServico, lancamentos: lancamentosDoServico }) => {
                   const acumuladoServico = realizadoServico.reduce((a, b) => a + b, 0);
                   const projetadoPorMes = CHAVES_MES.map((chave) => servico.orcamento_projetado?.[chave] ?? 0);
                   const acumuladoProjetado = projetadoPorMes.reduce((a, b) => a + b, 0);
@@ -367,15 +342,19 @@ function renderizarTabela(container, centros, linhas) {
                     .map((valor) => `<td class="col-mes numero-tabular">${valor > 0 ? formatadorRS.format(valor) : "—"}</td>`)
                     .join("");
 
-                  return `
-                    <tr class="linha-servico" data-centro="${centro.id}" data-conta="${conta.id}" style="display:none">
-                      <td class="col-conta">${servico.nome}</td>
+                  const linhaServico = `
+                    <tr class="linha-servico" data-centro="${centro.id}" data-conta="${conta.id}" data-grupo-toggle-servico="${servico.id}" style="display:none">
+                      <td class="col-conta"><span class="icone-toggle">▸</span>${servico.nome}</td>
                       ${celulasServico}
                       <td class="numero-tabular">${formatadorRS.format(acumuladoServico)}</td>
                       <td class="numero-tabular">${acumuladoProjetado > 0 ? formatadorRS.format(acumuladoProjetado) : "—"}</td>
                       <td class="numero-tabular">${formatadorRS.format(variacaoServico)}</td>
                       <td class="numero-tabular celula-heat ${classeHeatServico}">${acumuladoProjetado > 0 ? indexServico.toFixed(1) + "%" : "—"}</td>
                     </tr>`;
+
+                  const linhasNf = montarLinhasNf(lancamentosDoServico, centro.id, conta.id, servico.id);
+
+                  return linhaServico + linhasNf;
                 })
                 .join("");
 
@@ -388,7 +367,6 @@ function renderizarTabela(container, centros, linhas) {
     .join("");
 
   container.innerHTML = `
-    <div class="scroll-topo"><div class="scroll-topo-interno"></div></div>
     <div class="tabela-scroll">
       <table class="tabela-matriz">
         <thead>
@@ -410,7 +388,7 @@ function renderizarTabela(container, centros, linhas) {
       <span class="chip heat-verde">Index ≤ 95%</span>
       <span class="chip heat-amarelo">95,1% – 100%</span>
       <span class="chip heat-vermelho">Index &gt; 100%</span>
-      <span style="margin-left: auto; color: var(--ink-400); font-size: var(--text-xs)">Clique no Centro ou na Conta para recolher/expandir</span>
+      <span style="margin-left: auto; color: var(--ink-400); font-size: var(--text-xs)">Clique no Centro, na Conta ou no Serviço para recolher/expandir</span>
     </div>
   `;
 
@@ -420,17 +398,27 @@ function renderizarTabela(container, centros, linhas) {
   // fica inconsistente, não importa a ordem dos cliques. ---
   const centrosColapsados = new Set();
   const contasExpandidas = new Set();
+  const servicosExpandidos = new Set();
 
   function atualizarVisibilidade() {
     container.querySelectorAll("tr[data-centro]").forEach((linha) => {
       const centroId = linha.dataset.centro;
-      const contaId = linha.dataset.conta; // só existe em linhas de Serviço
+      const contaId = linha.dataset.conta; // existe em linhas de Serviço e de NF
+      const servicoId = linha.dataset.servico; // só existe em linhas de NF
 
       if (centrosColapsados.has(centroId)) {
         linha.style.display = "none";
         return;
       }
-      linha.style.display = contaId ? (contasExpandidas.has(contaId) ? "" : "none") : "";
+      if (contaId && !contasExpandidas.has(contaId)) {
+        linha.style.display = "none";
+        return;
+      }
+      if (servicoId && !servicosExpandidos.has(servicoId)) {
+        linha.style.display = "none";
+        return;
+      }
+      linha.style.display = "";
     });
   }
 
@@ -451,4 +439,55 @@ function renderizarTabela(container, centros, linhas) {
       atualizarVisibilidade();
     });
   });
+
+  container.querySelectorAll("[data-grupo-toggle-servico]").forEach((linhaServicoEl) => {
+    linhaServicoEl.addEventListener("click", () => {
+      const servicoId = linhaServicoEl.dataset.grupoToggleServico;
+      const expandido = linhaServicoEl.classList.toggle("expandido");
+      expandido ? servicosExpandidos.add(servicoId) : servicosExpandidos.delete(servicoId);
+      atualizarVisibilidade();
+    });
+  });
+}
+
+/**
+ * 4º nível da hierarquia: uma linha por NF (lançamento individual) de um
+ * Serviço. O valor aparece só na coluna do mês de emissão — as outras
+ * ficam em branco, pra não parecer que a NF se repete em vários meses.
+ * Colunas de Aprovado/Variação/Index não se aplicam no nível de NF
+ * (orçamento só existe por Conta e por Serviço, não por nota).
+ */
+function montarLinhasNf(lancamentos, centroId, contaId, servicoId) {
+  if (!lancamentos || lancamentos.length === 0) {
+    return `<tr class="linha-nf" data-centro="${centroId}" data-conta="${contaId}" data-servico="${servicoId}" style="display:none"><td colspan="${5 + 12}" style="color: var(--ink-400); font-style: italic; padding-left: 64px">Nenhuma NF lançada neste período.</td></tr>`;
+  }
+
+  return [...lancamentos]
+    .sort((a, b) => (aDate(b.data_emissao)?.getTime() ?? 0) - (aDate(a.data_emissao)?.getTime() ?? 0))
+    .map((l) => {
+      const idxMes = (l.mes_referencia ?? 1) - 1;
+      const celulasMeses = Array.from({ length: 12 }, (_, i) =>
+        `<td class="col-mes numero-tabular">${i === idxMes ? formatadorRS.format(l.valor_nf ?? 0) : "—"}</td>`
+      ).join("");
+
+      const dataEmissao = aDate(l.data_emissao);
+      const linkMovidesk = montarLinkMovidesk(l.protocolo_movidesk);
+      const divergente = l.status_divergencia === "COM_DIVERGENCIA";
+
+      return `
+        <tr class="linha-nf" data-centro="${centroId}" data-conta="${contaId}" data-servico="${servicoId}" style="display:none">
+          <td class="col-conta">
+            NF ${l.nf_numero || "s/n"}
+            <span class="nf-detalhe">${dataEmissao ? formatadorData.format(dataEmissao) : ""}</span>
+            ${divergente ? '<span class="chip chip-divergencia">divergência</span>' : ""}
+            ${linkMovidesk ? `<a href="${linkMovidesk}" target="_blank" rel="noopener" class="link-movidesk" onclick="event.stopPropagation()">Movidesk ↗</a>` : ""}
+          </td>
+          ${celulasMeses}
+          <td class="numero-tabular">${formatadorRS.format(l.valor_nf ?? 0)}</td>
+          <td class="numero-tabular">—</td>
+          <td class="numero-tabular">—</td>
+          <td class="numero-tabular">—</td>
+        </tr>`;
+    })
+    .join("");
 }
