@@ -236,6 +236,12 @@ Todo campo de texto, número, data, `<textarea>` e `<form>` do app tem `autocomp
 - **Protocolo Movidesk** virou obrigatório.
 - Rótulos de "Código da Conta Contábil" e "Ordem de Pagamento" simplificados — os lembretes entre parênteses ("mesmo em todas as fatias", "(rateio)") saíram por serem redundantes com o resto da tela.
 
+## Quarta camada: NF individual no Painel
+
+A hierarquia do Painel e de Centros de Terceiros agora tem quatro níveis: **Centro de Custo → Conta Contábil → Serviço → NF**. Clicar numa linha de Serviço revela uma linha por NF lançada (mais recente primeiro), com número da NF, data de emissão, o valor na coluna do mês correspondente, um selo "divergência" quando aplicável e o link do Movidesk (se houver protocolo). Cada nível abaixo do Centro começa recolhido.
+
+As colunas de Aprovado, Variação e Index ficam em "—" no nível de NF — orçamento só existe por Conta e por Serviço, não por nota. O filtro de Ano e de Usuário vale também pra esse nível.
+
 ## Próximos módulos (ainda não construídos)
 
 - Upload de foto da NF (Storage) — adiado, veja a seção sobre o plano Blaze acima.
