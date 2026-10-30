@@ -135,7 +135,7 @@
   font-size: var(--text-xs);
 }
 
-.tabela-matriz tbody tr:not(.linha-centro):hover td {
+.tabela-matriz tbody tr:not(.linha-centro):hover td:not(.celula-heat) {
   background: var(--paper-0);
 }
 
@@ -244,4 +244,37 @@
   color: var(--ink-400);
   font-size: var(--text-xs);
   margin-bottom: var(--space-2);
+}
+
+/* --- Comparativo Realizado x Aprovado mês a mês --- */
+
+/* Conta sem nenhum orçamento aprovado cadastrado: cinza, não vermelho — é
+   falta de cadastro, não estouro. */
+.heat-sem-orcamento {
+  background: var(--paper-0);
+  color: var(--ink-400);
+  border: 1px dashed var(--line-100);
+}
+
+/* Célula de mês colorida: um pouco menos pesada que as colunas de total */
+.col-mes.celula-heat {
+  font-weight: 600;
+  border-radius: 0;
+}
+
+.aviso-painel {
+  flex-shrink: 0;
+  margin-bottom: var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  background: var(--status-alerta-bg);
+  color: var(--status-alerta-fg);
+  border-radius: var(--radius-sm);
+  font-size: var(--text-xs);
+}
+
+.legenda-nota {
+  flex: 1 1 320px;
+  text-align: right;
+  color: var(--ink-400);
+  font-size: var(--text-xs);
 }
