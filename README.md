@@ -242,6 +242,18 @@ A hierarquia do Painel e de Centros de Terceiros agora tem quatro níveis: **Cen
 
 As colunas de Aprovado, Variação e Index ficam em "—" no nível de NF — orçamento só existe por Conta e por Serviço, não por nota. O filtro de Ano e de Usuário vale também pra esse nível.
 
+## Comparativo Realizado × Aprovado mês a mês
+
+Nos Painéis (próprios e de terceiros), cada mês das linhas de Centro e de Conta agora é colorido pelo Index daquele mês (Realizado ÷ Aprovado, mesmas faixas de sempre: ≤95% verde, 95,1–100% amarelo, >100% vermelho). Passar o mouse numa célula mostra Aprovado, Realizado e Variação do mês. Mês sem lançamento fica em branco, sem cor.
+
+- **O que mostrar nos meses:** Realizado, Aprovado ou Variação (Aprovado − Realizado). Muda o texto das células; a cor é sempre o Index do mês. Serviço e NF não têm Aprovado, então ficam em branco nas visões Aprovado e Variação.
+- **Acumulado até:** as colunas "Acum. Realizado", "Acum. Aprovado" e o Index % agora comparam só até o mês de corte — por padrão, o último mês que tem lançamento. Antes o Index comparava o gasto até agora com o orçamento dos 12 meses e parecia melhor do que a realidade. O aprovado do ano inteiro aparece no tooltip da célula. A ordenação dos Centros continua pelo orçamento do ano.
+- **Ano padrão:** abre no ano mais recente com lançamentos. Com "Todos os anos" aparece um aviso, porque a coluna Jan somaria 2025 e 2026 contra um único orçamento.
+- **Conta sem orçamento aprovado cadastrado:** fica cinza, não vermelha. Se a conta tem orçamento em outros meses e gasto num mês sem aprovado, aí sim fica vermelha.
+- **Expansão preservada:** o que você abriu (Centro, Conta, Serviço) continua aberto ao trocar de filtro ou de visão.
+
+Ainda não mudou: o relatório "Painel — Próprios/Terceiros" da aba Relatórios (e a exportação dele) segue com o Index do ano inteiro, e o relatório de Divergências continua comparando cada NF com o orçamento projetado do Serviço, não com o aprovado da Conta.
+
 ## Próximos módulos (ainda não construídos)
 
 - Upload de foto da NF (Storage) — adiado, veja a seção sobre o plano Blaze acima.
