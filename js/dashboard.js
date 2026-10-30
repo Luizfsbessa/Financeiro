@@ -32,7 +32,19 @@ const formatadorData = new Intl.DateTimeFormat("pt-BR");
 
 const estadoCarregado = new Map(); // containerId -> boolean
 const cachePainel = new Map(); // containerId -> { centros, contasComDados }
-const filtrosAtuais = new Map(); // containerId -> { ano, centroId, usuarioEmail }
+const filtrosAtuais = new Map(); // containerId -> { ano, centroId, usuarioEmail, visao, mesCorte }
+const estadosExpansao = new Map(); // containerId -> quais Centros/Contas/Serviços estão abertos
+
+function obterEstadoExpansao(containerId) {
+  if (!estadosExpansao.has(containerId)) {
+    estadosExpansao.set(containerId, {
+      centrosColapsados: new Set(),
+      contasExpandidas: new Set(),
+      servicosExpandidos: new Set(),
+    });
+  }
+  return estadosExpansao.get(containerId);
+}
 
 function aDate(valor) {
   if (!valor) return null;
@@ -72,7 +84,14 @@ async function iniciarPainelMatriz({ containerId, filtroTipoGestao, mensagemVazi
 
     cachePainel.set(containerId, { centros, contasComDados });
     if (!filtrosAtuais.has(containerId)) {
-      filtrosAtuais.set(containerId, { ano: "", centroId: "", usuarioEmail: "" });
+      // ano: null = ainda não escolhido -> assume o ano mais recente dos dados.
+      // ("" significa que a pessoa escolheu "Todos os anos" de propósito.)
+      filtrosAtuais.set(containerId, { ano: null, centroId: "", usuarioEmail: "", visao: "realizado", mesCorte: "" });
+    }
+    const filtroInicial = filtrosAtuais.get(containerId);
+    if (filtroInicial.ano === null) {
+      const anos = [...anosDisponiveisNosDados(cachePainel.get(containerId))];
+      filtroInicial.ano = anos.length ? String(Math.max(...anos)) : "";
     }
     estadoCarregado.set(containerId, true);
 
@@ -130,23 +149,30 @@ function montarEstruturaBase(container, containerId) {
   `;
 }
 
+function anosDisponiveisNosDados(cache) {
+  const anos = new Set();
+  cache.contasComDados.forEach(({ lancamentos }) =>
+    lancamentos.forEach((l) => {
+      const data = aDate(l.data_emissao);
+      if (data) anos.add(data.getFullYear());
+    })
+  );
+  return anos;
+}
+
 function renderizarFiltros(containerId) {
   const cache = cachePainel.get(containerId);
   const filtroEl = document.getElementById(`${containerId}-filtros`);
   if (!cache || !filtroEl) return;
 
-  const anosDisponiveis = new Set();
   const usuariosDisponiveis = new Map(); // email -> nome
-
-  cache.contasComDados.forEach(({ lancamentos }) => {
+  cache.contasComDados.forEach(({ lancamentos }) =>
     lancamentos.forEach((l) => {
-      const data = aDate(l.data_emissao);
-      if (data) anosDisponiveis.add(data.getFullYear());
       if (l.usuario_email) usuariosDisponiveis.set(l.usuario_email, l.usuario_nome || l.usuario_email);
-    });
-  });
+    })
+  );
 
-  const anosOrdenados = [...anosDisponiveis].sort((a, b) => b - a);
+  const anosOrdenados = [...anosDisponiveisNosDados(cache)].sort((a, b) => b - a);
   const usuariosOrdenados = [...usuariosDisponiveis.entries()].sort((a, b) => a[1].localeCompare(b[1]));
   const filtro = filtrosAtuais.get(containerId);
 
@@ -154,7 +180,7 @@ function renderizarFiltros(containerId) {
     <div class="campo">
       <label for="${containerId}-filtro-ano">Ano</label>
       <select id="${containerId}-filtro-ano">
-        <option value="">Todos os anos</option>
+        <option value="" ${filtro.ano === "" ? "selected" : ""}>Todos os anos</option>
         ${anosOrdenados.map((ano) => `<option value="${ano}" ${String(ano) === filtro.ano ? "selected" : ""}>${ano}</option>`).join("")}
       </select>
     </div>
@@ -176,20 +202,34 @@ function renderizarFiltros(containerId) {
         ${usuariosOrdenados.map(([email, nome]) => `<option value="${email}" ${email === filtro.usuarioEmail ? "selected" : ""}>${nome}</option>`).join("")}
       </select>
     </div>
+    <div class="campo">
+      <label for="${containerId}-filtro-visao">O que mostrar nos meses</label>
+      <select id="${containerId}-filtro-visao">
+        <option value="realizado" ${filtro.visao === "realizado" ? "selected" : ""}>Realizado</option>
+        <option value="aprovado" ${filtro.visao === "aprovado" ? "selected" : ""}>Aprovado</option>
+        <option value="variacao" ${filtro.visao === "variacao" ? "selected" : ""}>Variação (Aprovado − Realizado)</option>
+      </select>
+    </div>
+    <div class="campo">
+      <label for="${containerId}-filtro-corte">Acumulado até</label>
+      <select id="${containerId}-filtro-corte">
+        <option value="" ${filtro.mesCorte === "" ? "selected" : ""}>Último mês com lançamento</option>
+        ${NOMES_MES_ABREV.map((nome, i) => `<option value="${i + 1}" ${String(i + 1) === filtro.mesCorte ? "selected" : ""}>${nome}</option>`).join("")}
+      </select>
+    </div>
   `;
 
-  document.getElementById(`${containerId}-filtro-ano`).addEventListener("change", (e) => {
-    filtrosAtuais.get(containerId).ano = e.target.value;
-    atualizarCorpo(containerId);
-  });
-  document.getElementById(`${containerId}-filtro-centro`).addEventListener("change", (e) => {
-    filtrosAtuais.get(containerId).centroId = e.target.value;
-    atualizarCorpo(containerId);
-  });
-  document.getElementById(`${containerId}-filtro-usuario`).addEventListener("change", (e) => {
-    filtrosAtuais.get(containerId).usuarioEmail = e.target.value;
-    atualizarCorpo(containerId);
-  });
+  const ligar = (sufixo, propriedade) => {
+    document.getElementById(`${containerId}-filtro-${sufixo}`).addEventListener("change", (e) => {
+      filtrosAtuais.get(containerId)[propriedade] = e.target.value;
+      atualizarCorpo(containerId);
+    });
+  };
+  ligar("ano", "ano");
+  ligar("centro", "centroId");
+  ligar("usuario", "usuarioEmail");
+  ligar("visao", "visao");
+  ligar("corte", "mesCorte");
 }
 
 function atualizarCorpo(containerId) {
@@ -197,7 +237,7 @@ function atualizarCorpo(containerId) {
   const corpoEl = document.getElementById(`${containerId}-corpo`);
   if (!cache || !corpoEl) return;
 
-  const { ano, centroId, usuarioEmail } = filtrosAtuais.get(containerId);
+  const { ano, centroId, usuarioEmail, visao, mesCorte } = filtrosAtuais.get(containerId);
 
   const linhas = cache.contasComDados
     .filter(({ centro }) => !centroId || centro?.id === centroId)
@@ -234,7 +274,19 @@ function atualizarCorpo(containerId) {
 
   const centrosFiltrados = centroId ? cache.centros.filter((c) => c.id === centroId) : cache.centros;
 
-  renderizarTabela(corpoEl, centrosFiltrados, linhas);
+  // Mês de corte do acumulado: o escolhido, ou o último mês que já tem
+  // lançamento. Sem isso, o Index comparava o ano inteiro de gasto até agora
+  // contra o orçamento dos 12 meses — e parecia sempre melhor do que é.
+  let ultimoMesComLancamento = 0;
+  linhas.forEach(({ realizadoPorMes }) =>
+    realizadoPorMes.forEach((valor, i) => {
+      if (valor > 0) ultimoMesComLancamento = Math.max(ultimoMesComLancamento, i + 1);
+    })
+  );
+  const corte = mesCorte ? Number(mesCorte) : ultimoMesComLancamento || 12;
+  const avisoMultiplosAnos = !ano && anosDisponiveisNosDados(cache).size > 1;
+
+  renderizarTabela(corpoEl, centrosFiltrados, linhas, { visao, corte, avisoMultiplosAnos }, obterEstadoExpansao(containerId));
 }
 
 // --- Compartilhado ---
@@ -261,60 +313,107 @@ function classificarIndexCentro(indexPct) {
   return "heat-centro-vermelho";
 }
 
-function renderizarTabela(container, centros, linhas) {
+function somarAte(valores, corte) {
+  return valores.slice(0, corte).reduce((a, b) => a + b, 0);
+}
+
+/**
+ * Célula de um mês, nas linhas de Centro e de Conta. O texto depende da
+ * visão escolhida (Realizado / Aprovado / Variação), mas a COR é sempre o
+ * Index do mês (Realizado ÷ Aprovado) — assim o vermelho aparece sozinho,
+ * qualquer que seja a visão. Conta sem nenhum orçamento no ano fica cinza,
+ * em vez de vermelha, pra não parecer estouro o que é falta de cadastro.
+ */
+function montarCelulaMes({ realizado, aprovado, mes, visao, corte, temOrcamento, escuro }) {
+  let texto;
+  if (visao === "aprovado") {
+    texto = aprovado > 0 ? formatadorRS.format(aprovado) : "—";
+  } else if (visao === "variacao") {
+    texto = mes <= corte && (aprovado > 0 || realizado > 0) ? formatadorRS.format(aprovado - realizado) : "—";
+  } else {
+    texto = realizado > 0 ? formatadorRS.format(realizado) : "—";
+  }
+
+  let classe = "";
+  if (realizado > 0) {
+    if (!temOrcamento) {
+      classe = escuro ? "" : "celula-heat heat-sem-orcamento";
+    } else {
+      const pct = aprovado > 0 ? (realizado / aprovado) * 100 : Infinity; // gasto sem aprovado no mês
+      classe = escuro ? classificarIndexCentro(pct) : `celula-heat ${classificarIndex(pct)}`;
+    }
+  }
+
+  const tooltip =
+    `Aprovado: ${formatadorRS.format(aprovado)} · Realizado: ${formatadorRS.format(realizado)} · Variação: ${formatadorRS.format(aprovado - realizado)}` +
+    (temOrcamento ? "" : " · Sem orçamento aprovado cadastrado");
+
+  return `<td class="col-mes numero-tabular ${classe}" title="${tooltip}">${texto}</td>`;
+}
+
+function renderizarTabela(container, centros, linhas, { visao, corte, avisoMultiplosAnos }, estado) {
+  const nomeCorte = NOMES_MES_ABREV[corte - 1];
+
   const gruposPorCentro = centros
     .map((centro) => {
       const contasDoGrupo = linhas.filter((l) => l.conta?.centro_custo_id === centro.id);
 
       const somaRealizadoPorMes = Array(12).fill(0);
-      let somaRealizado = 0;
-      let somaAprovado = 0;
+      const somaAprovadoPorMes = Array(12).fill(0);
 
       contasDoGrupo.forEach(({ conta, realizadoPorMes }) => {
         realizadoPorMes.forEach((valor, i) => (somaRealizadoPorMes[i] += valor));
-        somaRealizado += realizadoPorMes.reduce((a, b) => a + b, 0);
-        somaAprovado += CHAVES_MES.reduce((acc, chave) => acc + (conta.orcamento_aprovado?.[chave] ?? 0), 0);
+        CHAVES_MES.forEach((chave, i) => (somaAprovadoPorMes[i] += conta.orcamento_aprovado?.[chave] ?? 0));
       });
 
-      return { centro, contasDoGrupo, somaRealizadoPorMes, somaRealizado, somaAprovado };
+      const somaAprovadoAno = somaAprovadoPorMes.reduce((a, b) => a + b, 0);
+      return { centro, contasDoGrupo, somaRealizadoPorMes, somaAprovadoPorMes, somaAprovadoAno };
     })
-    .sort((a, b) => b.somaAprovado - a.somaAprovado);
+    // Prioriza quem tem mais orçamento em jogo (total do ano) — "big numbers" primeiro.
+    .sort((a, b) => b.somaAprovadoAno - a.somaAprovadoAno);
 
   const cabecalhoMeses = NOMES_MES_ABREV.map((m) => `<th class="col-mes">${m}</th>`).join("");
 
   const corpo = gruposPorCentro
-    .map(({ centro, contasDoGrupo, somaRealizadoPorMes, somaRealizado, somaAprovado }) => {
-      const variacaoCentro = somaAprovado - somaRealizado;
-      const indexCentro = somaAprovado > 0 ? (somaRealizado / somaAprovado) * 100 : 0;
-      const classeHeatCentro = somaAprovado > 0 ? classificarIndexCentro(indexCentro) : "";
+    .map(({ centro, contasDoGrupo, somaRealizadoPorMes, somaAprovadoPorMes, somaAprovadoAno }) => {
+      const acumRealizadoCentro = somarAte(somaRealizadoPorMes, corte);
+      const acumAprovadoCentro = somarAte(somaAprovadoPorMes, corte);
+      const variacaoCentro = acumAprovadoCentro - acumRealizadoCentro;
+      const indexCentro = acumAprovadoCentro > 0 ? (acumRealizadoCentro / acumAprovadoCentro) * 100 : 0;
+      const classeHeatCentro = acumAprovadoCentro > 0 ? classificarIndexCentro(indexCentro) : "";
 
       const celulasMesesCentro = somaRealizadoPorMes
-        .map((valor) => `<td class="col-mes numero-tabular">${valor > 0 ? formatadorRS.format(valor) : "—"}</td>`)
+        .map((realizado, i) =>
+          montarCelulaMes({ realizado, aprovado: somaAprovadoPorMes[i], mes: i + 1, visao, corte, temOrcamento: somaAprovadoAno > 0, escuro: true })
+        )
         .join("");
 
       const linhaCentro = `
         <tr class="linha-centro" data-grupo-toggle="${centro.id}">
           <td class="col-conta"><span class="icone-toggle">▾</span>${centro.nome}${centro.codigo_centro ? ` <span class="centro-codigo">— ${centro.codigo_centro}</span>` : ""}</td>
           ${celulasMesesCentro}
-          <td class="numero-tabular">${formatadorRS.format(somaRealizado)}</td>
-          <td class="numero-tabular">${somaAprovado > 0 ? formatadorRS.format(somaAprovado) : "—"}</td>
+          <td class="numero-tabular">${formatadorRS.format(acumRealizadoCentro)}</td>
+          <td class="numero-tabular" title="Aprovado no ano: ${formatadorRS.format(somaAprovadoAno)}">${acumAprovadoCentro > 0 ? formatadorRS.format(acumAprovadoCentro) : "—"}</td>
           <td class="numero-tabular">${formatadorRS.format(variacaoCentro)}</td>
-          <td class="numero-tabular ${classeHeatCentro}">${somaAprovado > 0 ? indexCentro.toFixed(1) + "%" : "—"}</td>
+          <td class="numero-tabular ${classeHeatCentro}">${acumAprovadoCentro > 0 ? indexCentro.toFixed(1) + "%" : "—"}</td>
         </tr>`;
 
       const linhasConta = contasDoGrupo.length === 0
         ? `<tr data-centro="${centro.id}"><td colspan="${5 + 12}" style="color: var(--ink-400); font-style: italic">Nenhuma Conta Contábil cadastrada ainda.</td></tr>`
         : contasDoGrupo
         .map(({ conta, realizadoPorMes, servicosDetalhe }) => {
-          const acumuladoRealizado = realizadoPorMes.reduce((a, b) => a + b, 0);
           const aprovadoPorMes = CHAVES_MES.map((chave) => conta.orcamento_aprovado?.[chave] ?? 0);
-          const acumuladoAprovado = aprovadoPorMes.reduce((a, b) => a + b, 0);
+          const aprovadoAno = aprovadoPorMes.reduce((a, b) => a + b, 0);
+          const temOrcamento = aprovadoAno > 0;
+
+          const acumuladoRealizado = somarAte(realizadoPorMes, corte);
+          const acumuladoAprovado = somarAte(aprovadoPorMes, corte);
           const variacao = acumuladoAprovado - acumuladoRealizado;
           const indexPct = acumuladoAprovado > 0 ? (acumuladoRealizado / acumuladoAprovado) * 100 : 0;
           const classeHeat = acumuladoAprovado > 0 ? classificarIndex(indexPct) : "heat-sem-dados";
 
           const celulasMeses = realizadoPorMes
-            .map((valor) => `<td class="col-mes numero-tabular">${valor > 0 ? formatadorRS.format(valor) : "—"}</td>`)
+            .map((realizado, i) => montarCelulaMes({ realizado, aprovado: aprovadoPorMes[i], mes: i + 1, visao, corte, temOrcamento, escuro: false }))
             .join("");
 
           const linhaConta = `
@@ -322,7 +421,7 @@ function renderizarTabela(container, centros, linhas) {
               <td class="col-conta"><span class="icone-toggle">▸</span>${conta.nome}</td>
               ${celulasMeses}
               <td class="numero-tabular">${formatadorRS.format(acumuladoRealizado)}</td>
-              <td class="numero-tabular">${acumuladoAprovado > 0 ? formatadorRS.format(acumuladoAprovado) : "—"}</td>
+              <td class="numero-tabular" title="Aprovado no ano: ${formatadorRS.format(aprovadoAno)}">${acumuladoAprovado > 0 ? formatadorRS.format(acumuladoAprovado) : "—"}</td>
               <td class="numero-tabular">${formatadorRS.format(variacao)}</td>
               <td class="numero-tabular celula-heat ${classeHeat}">${acumuladoAprovado > 0 ? indexPct.toFixed(1) + "%" : "—"}</td>
             </tr>`;
@@ -331,15 +430,17 @@ function renderizarTabela(container, centros, linhas) {
             ? `<tr data-centro="${centro.id}" data-conta="${conta.id}" style="display:none"><td colspan="${5 + 12}" style="color: var(--ink-400); font-style: italic; padding-left: 32px">Nenhum Serviço cadastrado nesta conta ainda.</td></tr>`
             : servicosDetalhe
                 .map(({ servico, realizadoPorMes: realizadoServico, lancamentos: lancamentosDoServico }) => {
-                  const acumuladoServico = realizadoServico.reduce((a, b) => a + b, 0);
                   const projetadoPorMes = CHAVES_MES.map((chave) => servico.orcamento_projetado?.[chave] ?? 0);
-                  const acumuladoProjetado = projetadoPorMes.reduce((a, b) => a + b, 0);
+                  const acumuladoServico = somarAte(realizadoServico, corte);
+                  const acumuladoProjetado = somarAte(projetadoPorMes, corte);
                   const variacaoServico = acumuladoProjetado - acumuladoServico;
                   const indexServico = acumuladoProjetado > 0 ? (acumuladoServico / acumuladoProjetado) * 100 : 0;
                   const classeHeatServico = acumuladoProjetado > 0 ? classificarIndex(indexServico) : "heat-sem-dados";
 
+                  // Serviço não tem Aprovado (só a Conta tem) — nas visões
+                  // Aprovado/Variação os meses ficam em branco.
                   const celulasServico = realizadoServico
-                    .map((valor) => `<td class="col-mes numero-tabular">${valor > 0 ? formatadorRS.format(valor) : "—"}</td>`)
+                    .map((valor) => `<td class="col-mes numero-tabular">${visao === "realizado" && valor > 0 ? formatadorRS.format(valor) : "—"}</td>`)
                     .join("");
 
                   const linhaServico = `
@@ -352,9 +453,7 @@ function renderizarTabela(container, centros, linhas) {
                       <td class="numero-tabular celula-heat ${classeHeatServico}">${acumuladoProjetado > 0 ? indexServico.toFixed(1) + "%" : "—"}</td>
                     </tr>`;
 
-                  const linhasNf = montarLinhasNf(lancamentosDoServico, centro.id, conta.id, servico.id);
-
-                  return linhaServico + linhasNf;
+                  return linhaServico + montarLinhasNf(lancamentosDoServico, centro.id, conta.id, servico.id, { visao, corte });
                 })
                 .join("");
 
@@ -366,15 +465,20 @@ function renderizarTabela(container, centros, linhas) {
     })
     .join("");
 
+  const avisoHtml = avisoMultiplosAnos
+    ? `<div class="aviso-painel">Há lançamentos de mais de um ano nos dados. Com "Todos os anos", cada coluna de mês soma anos diferentes contra um único orçamento aprovado — escolha um ano para comparar com segurança.</div>`
+    : "";
+
   container.innerHTML = `
+    ${avisoHtml}
     <div class="tabela-scroll">
       <table class="tabela-matriz">
         <thead>
           <tr>
             <th class="col-conta">Centro de Custo / Conta Contábil / Serviço</th>
             ${cabecalhoMeses}
-            <th>Acum. Realizado</th>
-            <th>Acum. Aprovado</th>
+            <th>Acum. Realizado (até ${nomeCorte})</th>
+            <th>Acum. Aprovado (até ${nomeCorte})</th>
             <th>Variação R$</th>
             <th>Index %</th>
           </tr>
@@ -388,17 +492,15 @@ function renderizarTabela(container, centros, linhas) {
       <span class="chip heat-verde">Index ≤ 95%</span>
       <span class="chip heat-amarelo">95,1% – 100%</span>
       <span class="chip heat-vermelho">Index &gt; 100%</span>
-      <span style="margin-left: auto; color: var(--ink-400); font-size: var(--text-xs)">Clique no Centro, na Conta ou no Serviço para recolher/expandir</span>
+      <span class="chip heat-sem-orcamento">Sem orçamento cadastrado</span>
+      <span class="legenda-nota">A cor de cada mês é Realizado ÷ Aprovado do mês, em qualquer visão. Serviço e NF não têm Aprovado: ficam em branco nas visões Aprovado e Variação. Clique no Centro, na Conta ou no Serviço para recolher/expandir.</span>
     </div>
   `;
 
-  // --- Visibilidade orientada a estado: um Set guarda quais Centros estão
-  // recolhidos e outro quais Contas estão EXPANDIDAS (o padrão é recolhida).
-  // Recalcula tudo a cada clique, então a combinação Centro+Conta nunca
-  // fica inconsistente, não importa a ordem dos cliques. ---
-  const centrosColapsados = new Set();
-  const contasExpandidas = new Set();
-  const servicosExpandidos = new Set();
+  // --- Visibilidade orientada a estado. Os Sets vivem fora desta função
+  // (estado), então o que a pessoa abriu sobrevive a trocar de filtro ou de
+  // visão — antes, cada troca recolhia tudo de novo. ---
+  const { centrosColapsados, contasExpandidas, servicosExpandidos } = estado;
 
   function atualizarVisibilidade() {
     container.querySelectorAll("tr[data-centro]").forEach((linha) => {
@@ -422,32 +524,26 @@ function renderizarTabela(container, centros, linhas) {
     });
   }
 
-  container.querySelectorAll("[data-grupo-toggle]").forEach((linhaCentroEl) => {
-    linhaCentroEl.addEventListener("click", () => {
-      const centroId = linhaCentroEl.dataset.grupoToggle;
-      const colapsado = linhaCentroEl.classList.toggle("colapsado");
-      colapsado ? centrosColapsados.add(centroId) : centrosColapsados.delete(centroId);
-      atualizarVisibilidade();
+  // Em todos os três níveis, "a classe está no elemento" e "o id está no Set"
+  // significam a mesma coisa (colapsado, no caso do Centro; expandido, nos demais).
+  const ligarToggle = (seletor, atributo, conjunto, classe) => {
+    container.querySelectorAll(seletor).forEach((el) => {
+      const id = el.dataset[atributo];
+      if (conjunto.has(id)) el.classList.add(classe); // restaura o estado ao redesenhar
+      el.addEventListener("click", () => {
+        const ligado = el.classList.toggle(classe);
+        if (ligado) conjunto.add(id);
+        else conjunto.delete(id);
+        atualizarVisibilidade();
+      });
     });
-  });
+  };
 
-  container.querySelectorAll("[data-grupo-toggle-conta]").forEach((linhaContaEl) => {
-    linhaContaEl.addEventListener("click", () => {
-      const contaId = linhaContaEl.dataset.grupoToggleConta;
-      const expandido = linhaContaEl.classList.toggle("expandido");
-      expandido ? contasExpandidas.add(contaId) : contasExpandidas.delete(contaId);
-      atualizarVisibilidade();
-    });
-  });
+  ligarToggle("[data-grupo-toggle]", "grupoToggle", centrosColapsados, "colapsado");
+  ligarToggle("[data-grupo-toggle-conta]", "grupoToggleConta", contasExpandidas, "expandido");
+  ligarToggle("[data-grupo-toggle-servico]", "grupoToggleServico", servicosExpandidos, "expandido");
 
-  container.querySelectorAll("[data-grupo-toggle-servico]").forEach((linhaServicoEl) => {
-    linhaServicoEl.addEventListener("click", () => {
-      const servicoId = linhaServicoEl.dataset.grupoToggleServico;
-      const expandido = linhaServicoEl.classList.toggle("expandido");
-      expandido ? servicosExpandidos.add(servicoId) : servicosExpandidos.delete(servicoId);
-      atualizarVisibilidade();
-    });
-  });
+  atualizarVisibilidade();
 }
 
 /**
@@ -457,7 +553,7 @@ function renderizarTabela(container, centros, linhas) {
  * Colunas de Aprovado/Variação/Index não se aplicam no nível de NF
  * (orçamento só existe por Conta e por Serviço, não por nota).
  */
-function montarLinhasNf(lancamentos, centroId, contaId, servicoId) {
+function montarLinhasNf(lancamentos, centroId, contaId, servicoId, { visao, corte }) {
   if (!lancamentos || lancamentos.length === 0) {
     return `<tr class="linha-nf" data-centro="${centroId}" data-conta="${contaId}" data-servico="${servicoId}" style="display:none"><td colspan="${5 + 12}" style="color: var(--ink-400); font-style: italic; padding-left: 64px">Nenhuma NF lançada neste período.</td></tr>`;
   }
@@ -465,9 +561,9 @@ function montarLinhasNf(lancamentos, centroId, contaId, servicoId) {
   return [...lancamentos]
     .sort((a, b) => (aDate(b.data_emissao)?.getTime() ?? 0) - (aDate(a.data_emissao)?.getTime() ?? 0))
     .map((l) => {
-      const idxMes = (l.mes_referencia ?? 1) - 1;
+      const mes = l.mes_referencia ?? 1;
       const celulasMeses = Array.from({ length: 12 }, (_, i) =>
-        `<td class="col-mes numero-tabular">${i === idxMes ? formatadorRS.format(l.valor_nf ?? 0) : "—"}</td>`
+        `<td class="col-mes numero-tabular">${visao === "realizado" && i === mes - 1 ? formatadorRS.format(l.valor_nf ?? 0) : "—"}</td>`
       ).join("");
 
       const dataEmissao = aDate(l.data_emissao);
@@ -483,7 +579,7 @@ function montarLinhasNf(lancamentos, centroId, contaId, servicoId) {
             ${linkMovidesk ? `<a href="${linkMovidesk}" target="_blank" rel="noopener" class="link-movidesk" onclick="event.stopPropagation()">Movidesk ↗</a>` : ""}
           </td>
           ${celulasMeses}
-          <td class="numero-tabular">${formatadorRS.format(l.valor_nf ?? 0)}</td>
+          <td class="numero-tabular">${mes <= corte ? formatadorRS.format(l.valor_nf ?? 0) : "—"}</td>
           <td class="numero-tabular">—</td>
           <td class="numero-tabular">—</td>
           <td class="numero-tabular">—</td>
