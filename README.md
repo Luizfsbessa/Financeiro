@@ -254,6 +254,21 @@ Nos Painéis (próprios e de terceiros), cada mês das linhas de Centro e de Con
 
 Ainda não mudou: o relatório "Painel — Próprios/Terceiros" da aba Relatórios (e a exportação dele) segue com o Index do ano inteiro, e o relatório de Divergências continua comparando cada NF com o orçamento projetado do Serviço, não com o aprovado da Conta.
 
+## Importação de CSV no rateio
+
+Na aba "Rateio entre Centros de Custo", o botão **Importar CSV** preenche as fatias a partir de um arquivo. A interrogação ao lado abre a dica de formatação (abre no clique, fecha clicando fora ou com Esc) e tem o link para baixar um arquivo-modelo.
+
+- **Colunas:** `centro` e `percentual` (obrigatórias) e `servico` (opcional). O cabeçalho aceita variações (`Centro de Custo`, `Percentual (%)`, `Fornecedor`...).
+- **centro:** código do Centro de Custo ou nome exato, sem diferença de acento ou maiúscula. Nunca escolhe um centro "parecido": se não achar, a linha não entra e aparece na lista com sugestões.
+- **percentual:** 0 a 100, vírgula ou ponto, com ou sem `%`. Mais de 4 casas é arredondado, com aviso.
+- **servico:** nome ou código do fornecedor. Em branco, é escolhido sozinho só se a conta daquele centro tiver um único serviço; senão a linha fica para você escolher.
+- **Separador e acentos:** reconhece `;`, `,` e tabulação, e abre tanto UTF-8 quanto o CSV padrão do Excel em português (Windows-1252). Vírgula como separador com vírgula decimal sem aspas é recusado com explicação, não interpretado.
+- **Antes de importar:** o código da Conta Contábil precisa estar preenchido, porque é ele que define a conta de cada centro.
+- **Depois de importar:** aparece um relatório com o que entrou, o que não entrou (com o número da linha do arquivo) e os avisos (centro repetido, soma diferente de 100%, serviço a escolher). **Nada é gravado até clicar em Salvar Rateio**, e o Salvar continua exigindo soma 100%, NF, protocolo e todos os serviços.
+- Importar com fatias já na tela pede confirmação para substituir.
+
+A leitura e as regras do CSV estão em `js/rateio-csv.js` (funções puras, sem tela nem banco).
+
 ## Próximos módulos (ainda não construídos)
 
 - Upload de foto da NF (Storage) — adiado, veja a seção sobre o plano Blaze acima.

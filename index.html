@@ -253,10 +253,33 @@
               <a id="rat-link-movidesk" href="#" target="_blank" rel="noopener" class="link-movidesk" hidden>Abrir ticket no Movidesk ↗</a>
             </div>
 
-            <div style="display: flex; justify-content: space-between; align-items: center; margin: var(--space-4) 0 var(--space-2)">
+            <div class="rat-cabecalho-fatias">
               <label style="font-size: var(--text-xs); font-weight: 600; text-transform: uppercase; letter-spacing: 0.03em; color: var(--ink-700)">Fatias do rateio</label>
-              <button type="button" id="rat-botao-add-linha" class="botao-link">+ Adicionar Centro de Custo</button>
+              <div class="rat-acoes-fatias">
+                <button type="button" id="rat-botao-importar-csv" class="botao-link">Importar CSV</button>
+                <span class="dica-wrapper">
+                  <button type="button" id="rat-dica-csv-botao" class="dica-botao" aria-expanded="false" aria-controls="rat-dica-csv" aria-label="Como formatar o CSV de importação">?</button>
+                  <div id="rat-dica-csv" class="dica-popover" role="region" aria-label="Como formatar o CSV de importação" hidden>
+                    <strong>Como montar o CSV</strong>
+                    <ul>
+                      <li>A <b>primeira linha</b> é o cabeçalho, com as colunas <code>centro</code> e <code>percentual</code>. A coluna <code>servico</code> é opcional.</li>
+                      <li><b>centro</b>: o código do Centro de Custo (ex.: 11500) ou o nome <b>exato</b> do cadastro. Cada centro uma vez só.</li>
+                      <li><b>percentual</b>: de 0 a 100, até 4 casas, com vírgula ou ponto (33,3333). A soma precisa fechar 100%.</li>
+                      <li><b>servico</b>: nome do Serviço/Prestador ou código do fornecedor. Em branco: se a conta do centro tem um só serviço, ele é escolhido sozinho; se tiver vários, você escolhe na tela.</li>
+                      <li><b>Separador</b>: use ponto e vírgula (padrão do Excel em português). Se usar vírgula, coloque o percentual entre aspas.</li>
+                      <li>Preencha o <b>código da Conta Contábil</b> antes de importar: é ele que define de qual conta de cada centro as fatias saem.</li>
+                      <li>Linhas com problema <b>não entram</b> e ficam listadas, com o número da linha. O sistema nunca escolhe um centro "parecido".</li>
+                      <li>Importar <b>substitui</b> as fatias que já estão na tela. Nada é gravado até você clicar em Salvar Rateio.</li>
+                    </ul>
+                    <button type="button" id="rat-baixar-modelo" class="botao-link">Baixar modelo (.csv)</button>
+                  </div>
+                </span>
+                <button type="button" id="rat-botao-add-linha" class="botao-link">+ Adicionar Centro de Custo</button>
+                <input type="file" id="rat-input-csv" accept=".csv,text/csv" hidden />
+              </div>
             </div>
+
+            <div id="rat-csv-resultado" class="rat-csv-resultado" role="status" hidden></div>
 
             <div id="rat-linhas"></div>
 
