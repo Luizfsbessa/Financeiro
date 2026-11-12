@@ -22,6 +22,7 @@ import { processarLancamento } from "./conciliacao.js";
 import { dadosDoLancador } from "./auth.js";
 import { invalidarDashboard, invalidarPainelTerceiros } from "./dashboard.js";
 import { montarLinkMovidesk } from "./integracoes.js";
+import { lerCsv, decodificarCsv, encontrarCentro, encontrarServico, modeloCsv } from "./rateio-csv.js";
 
 const formatadorRS = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" });
 
@@ -51,6 +52,7 @@ export function iniciarRateio(user) {
   conectarBotaoAdicionarLinha();
   conectarSalvar();
   conectarAtalhosTeclado();
+  conectarImportacaoCsv();
 }
 
 /**
@@ -203,7 +205,13 @@ function conectarBotaoAdicionarLinha() {
   document.getElementById("rat-botao-add-linha")?.addEventListener("click", () => adicionarLinha());
 }
 
-async function adicionarLinha() {
+/**
+ * Adiciona uma fatia. Sem `preset`, é a linha em branco do botão "+ Adicionar".
+ * Com `preset` ({ centros, centroId, percentual, servicoTexto }), a linha já
+ * nasce com Centro, percentual e Serviço escolhidos — usado pela importação
+ * de CSV. Devolve os avisos que a importação precisa mostrar (vazia no uso manual).
+ */
+async function adicionarLinha(preset = null) {
   const container = document.getElementById("rat-linhas");
   const id = `rl${contadorLinhas++}`;
 
@@ -230,12 +238,14 @@ async function adicionarLinha() {
     <button type="button" class="rat-linha-remover botao-link">Remover</button>
     <p class="rat-linha-aviso"></p>
   `;
+  // Síncrono, antes de qualquer await: na importação, várias linhas carregam em
+  // paralelo e é esta linha que já fixa a ordem em que elas aparecem na tela.
   container.appendChild(div);
 
-  const centros = await listarCentrosCusto();
+  const centros = preset?.centros ?? (await listarCentrosCusto());
   const selCentro = div.querySelector(".rat-linha-centro");
   selCentro.innerHTML = '<option value="">Selecione o Centro de Custo</option>';
-  centros
+  [...centros]
     .sort((a, b) => a.nome.localeCompare(b.nome))
     .forEach((c) => {
       const option = document.createElement("option");
@@ -247,10 +257,12 @@ async function adicionarLinha() {
   const selServico = div.querySelector(".rat-linha-servico");
   const inputFracao = div.querySelector(".rat-linha-fracao");
   const aviso = div.querySelector(".rat-linha-aviso");
+  let servicosDaLinha = [];
 
-  selCentro.addEventListener("change", async () => {
+  async function resolverContaEServicos() {
     const codigo = document.getElementById("rat-conta-codigo").value.trim();
     div.dataset.contaId = "";
+    servicosDaLinha = [];
     selServico.innerHTML = '<option value="">Selecione o Centro</option>';
     selServico.disabled = true;
     aviso.textContent = "";
@@ -264,13 +276,13 @@ async function adicionarLinha() {
     }
     div.dataset.contaId = conta.id;
 
-    const servicos = await listarServicosPorConta(conta.id);
-    if (servicos.length === 0) {
+    servicosDaLinha = await listarServicosPorConta(conta.id);
+    if (servicosDaLinha.length === 0) {
       selServico.innerHTML = '<option value="">Nenhum Serviço cadastrado nesta conta</option>';
       return;
     }
     selServico.innerHTML = '<option value="">Selecione o Serviço/Prestador</option>';
-    servicos.forEach((s) => {
+    servicosDaLinha.forEach((s) => {
       const option = document.createElement("option");
       option.value = s.id;
       option.textContent = s.nome;
@@ -278,13 +290,43 @@ async function adicionarLinha() {
       selServico.appendChild(option);
     });
     selServico.disabled = false;
-  });
+  }
 
+  selCentro.addEventListener("change", resolverContaEServicos);
   inputFracao.addEventListener("input", recalcularTotais);
   div.querySelector(".rat-linha-remover").addEventListener("click", () => {
     div.remove();
     recalcularTotais();
   });
+
+  const avisosDaLinha = [];
+  if (preset) {
+    const nomeCentro = centros.find((c) => c.id === preset.centroId)?.nome ?? "Centro";
+    selCentro.value = preset.centroId;
+    inputFracao.value = String(preset.percentual);
+    await resolverContaEServicos();
+
+    if (!div.dataset.contaId) {
+      avisosDaLinha.push(`${nomeCentro}: a Conta Contábil não existe neste Centro (cadastre em "Orçamento & Contas" antes de salvar).`);
+    } else if (servicosDaLinha.length === 0) {
+      avisosDaLinha.push(`${nomeCentro}: a conta não tem nenhum Serviço cadastrado.`);
+    } else {
+      let escolhido = null;
+      if (preset.servicoTexto) {
+        const achado = encontrarServico(preset.servicoTexto, servicosDaLinha);
+        if (achado.servico) escolhido = achado.servico;
+        else avisosDaLinha.push(`${nomeCentro}: ${achado.erro} — escolha o serviço na própria linha.`);
+      } else if (servicosDaLinha.length === 1) {
+        escolhido = servicosDaLinha[0]; // só existe um: não há o que adivinhar
+      } else {
+        avisosDaLinha.push(`${nomeCentro}: a conta tem ${servicosDaLinha.length} serviços e o CSV não diz qual — escolha na própria linha.`);
+      }
+      if (escolhido) selServico.value = escolhido.id;
+    }
+    recalcularTotais();
+  }
+
+  return avisosDaLinha;
 }
 
 function recalcularTotais() {
@@ -427,6 +469,7 @@ async function salvarRateio() {
     invalidarPainelTerceiros();
 
     document.getElementById("rat-linhas").innerHTML = "";
+    limparResultadoCsv();
     document.getElementById("rat-nf-numero").value = "";
     document.getElementById("rat-valor-total").value = "";
     document.getElementById("rat-data-emissao").value = "";
@@ -439,5 +482,169 @@ async function salvarRateio() {
     status.textContent = "Erro: " + (erro.message || "não foi possível salvar, tente novamente.");
   } finally {
     botao.disabled = false;
+  }
+}
+
+
+// --- Importação de CSV ---
+
+function limparResultadoCsv() {
+  const caixa = document.getElementById("rat-csv-resultado");
+  if (!caixa) return;
+  caixa.hidden = true;
+  caixa.replaceChildren();
+}
+
+/** tipo: "sucesso" | "alerta" | "erro". Usa textContent: o conteúdo vem do arquivo da pessoa. */
+function mostrarResultadoCsv(tipo, titulo, itens = []) {
+  const caixa = document.getElementById("rat-csv-resultado");
+  if (!caixa) return;
+  caixa.className = `rat-csv-resultado ${tipo}`;
+  caixa.replaceChildren();
+
+  const strong = document.createElement("strong");
+  strong.textContent = titulo;
+  caixa.appendChild(strong);
+
+  if (itens.length > 0) {
+    const ul = document.createElement("ul");
+    itens.forEach((texto) => {
+      const li = document.createElement("li");
+      li.textContent = texto;
+      ul.appendChild(li);
+    });
+    caixa.appendChild(ul);
+  }
+  caixa.hidden = false;
+}
+
+function baixarModeloCsv() {
+  // BOM no começo: sem ele o Excel abre o arquivo como ANSI e estraga os acentos.
+  const blob = new Blob(["\uFEFF" + modeloCsv()], { type: "text/csv;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = "modelo-rateio.csv";
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
+}
+
+async function importarArquivoCsv(arquivo) {
+  const codigo = document.getElementById("rat-conta-codigo").value.trim();
+  if (!codigo) {
+    mostrarResultadoCsv("erro", "Preencha o código da Conta Contábil antes de importar", [
+      "É ele que define de qual conta de cada Centro de Custo as fatias serão puxadas.",
+    ]);
+    return;
+  }
+
+  const leitura = lerCsv(decodificarCsv(await arquivo.arrayBuffer()));
+  if (leitura.erroFatal) {
+    mostrarResultadoCsv("erro", "Não foi possível importar o arquivo", [leitura.erroFatal]);
+    return;
+  }
+
+  const centros = await listarCentrosCusto();
+  const naoImportadas = leitura.erros.map((e) => `Linha ${e.numero}: ${e.mensagem}`);
+  const validas = [];
+
+  leitura.linhas.forEach((linha) => {
+    const achado = encontrarCentro(linha.centro, centros);
+    if (achado.erro) naoImportadas.push(`Linha ${linha.numero}: ${achado.erro}`);
+    else validas.push({ ...linha, centroObj: achado.centro });
+  });
+
+  if (validas.length === 0) {
+    mostrarResultadoCsv("erro", "Nenhuma linha pôde ser importada", naoImportadas);
+    return;
+  }
+
+  const existentes = document.querySelectorAll(".rat-linha").length;
+  if (existentes > 0 && !window.confirm(`Já existem ${existentes} fatia(s) na tela. Importar vai substituí-las por ${validas.length}. Continuar?`)) {
+    return;
+  }
+
+  document.getElementById("rat-linhas").innerHTML = "";
+  const avisosDasLinhas = (
+    await Promise.all(
+      validas.map((v) => adicionarLinha({ centros, centroId: v.centroObj.id, percentual: v.percentual, servicoTexto: v.servico }))
+    )
+  ).flat();
+
+  const avisos = [...leitura.avisos];
+  const repeticoes = new Map();
+  validas.forEach((v) => repeticoes.set(v.centroObj.id, (repeticoes.get(v.centroObj.id) ?? 0) + 1));
+  repeticoes.forEach((vezes, centroId) => {
+    if (vezes > 1) avisos.push(`${centros.find((c) => c.id === centroId)?.nome} aparece ${vezes} vezes no arquivo — confira se não é duplicidade.`);
+  });
+  avisos.push(...avisosDasLinhas);
+
+  const soma = validas.reduce((acc, v) => acc + v.percentual, 0);
+  if (Math.abs(soma - 100) >= 0.05) {
+    avisos.push(`A soma dos percentuais importados é ${soma.toFixed(4).replace(".", ",")}% — precisa fechar em 100% para salvar.`);
+  }
+
+  const lembrete = "Nada foi salvo ainda: confira as fatias e clique em Salvar Rateio.";
+  if (naoImportadas.length > 0) {
+    mostrarResultadoCsv(
+      "alerta",
+      `${validas.length} fatia(s) importada(s); ${naoImportadas.length} linha(s) do arquivo NÃO entraram`,
+      [...naoImportadas.map((t) => `Não importada — ${t}`), ...avisos, lembrete]
+    );
+  } else if (avisos.length > 0) {
+    mostrarResultadoCsv("alerta", `${validas.length} fatia(s) importada(s), com avisos`, [...avisos, lembrete]);
+  } else {
+    mostrarResultadoCsv("sucesso", `${validas.length} fatia(s) importada(s) sem pendências`, [lembrete]);
+  }
+}
+
+function conectarImportacaoCsv() {
+  const botaoImportar = document.getElementById("rat-botao-importar-csv");
+  const inputArquivo = document.getElementById("rat-input-csv");
+  const botaoDica = document.getElementById("rat-dica-csv-botao");
+  const painelDica = document.getElementById("rat-dica-csv");
+  if (!botaoImportar || !inputArquivo) return;
+
+  botaoImportar.addEventListener("click", () => inputArquivo.click());
+
+  inputArquivo.addEventListener("change", async () => {
+    const arquivo = inputArquivo.files[0];
+    inputArquivo.value = ""; // permite escolher o mesmo arquivo de novo depois de corrigi-lo
+    if (!arquivo) return;
+
+    botaoImportar.disabled = true;
+    try {
+      await importarArquivoCsv(arquivo);
+    } catch (erro) {
+      console.error("[rateio] erro ao importar CSV:", erro);
+      mostrarResultadoCsv("erro", "Erro ao importar", [erro.message || "Não foi possível ler o arquivo."]);
+    } finally {
+      botaoImportar.disabled = false;
+    }
+  });
+
+  // Dica: abre no CLIQUE (e não no hover) — funciona no celular e no teclado,
+  // e dá pra selecionar/copiar o texto sem ele sumir quando o mouse se mexe.
+  if (botaoDica && painelDica) {
+    const alternar = (abrir) => {
+      painelDica.hidden = !abrir;
+      botaoDica.setAttribute("aria-expanded", String(abrir));
+    };
+    botaoDica.addEventListener("click", (evento) => {
+      evento.stopPropagation();
+      alternar(painelDica.hidden);
+    });
+    document.addEventListener("click", (evento) => {
+      if (!painelDica.hidden && !painelDica.contains(evento.target)) alternar(false);
+    });
+    document.addEventListener("keydown", (evento) => {
+      if (evento.key === "Escape" && !painelDica.hidden) {
+        alternar(false);
+        botaoDica.focus();
+      }
+    });
+    document.getElementById("rat-baixar-modelo")?.addEventListener("click", baixarModeloCsv);
   }
 }
