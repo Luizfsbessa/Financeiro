@@ -287,3 +287,91 @@
 @media (max-width: 900px) {
   .rat-linha { grid-template-columns: 1fr; }
 }
+
+/* --- Importação de CSV no rateio --- */
+.rat-cabecalho-fatias {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin: var(--space-4) 0 var(--space-2);
+}
+.rat-acoes-fatias {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+/* Interrogação que abre a dica. Abre no clique (não no hover): funciona no
+   celular e no teclado, e o texto não some quando o mouse se mexe. */
+.dica-wrapper {
+  position: relative;
+  display: inline-flex;
+}
+.dica-botao {
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--brass-500);
+  border-radius: 50%;
+  background: var(--paper-1);
+  color: var(--brass-500);
+  font-size: var(--text-xs);
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+}
+.dica-botao:hover,
+.dica-botao[aria-expanded="true"] {
+  background: var(--brass-500);
+  color: var(--paper-1);
+}
+.dica-popover {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 30;
+  width: 380px;
+  max-width: 85vw;
+  padding: var(--space-4);
+  background: var(--paper-1);
+  border: 1px solid var(--line-100);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-card);
+  font-size: var(--text-xs);
+  line-height: 1.5;
+  color: var(--ink-700);
+  text-align: left;
+}
+.dica-popover[hidden] { display: none; }
+.dica-popover ul {
+  margin: var(--space-2) 0 var(--space-3);
+  padding-left: var(--space-4);
+}
+.dica-popover li { margin-bottom: var(--space-2); }
+.dica-popover code {
+  font-family: var(--font-ledger);
+  background: var(--paper-0);
+  padding: 0 4px;
+  border-radius: var(--radius-sm);
+}
+
+/* Relatório do que entrou e do que não entrou na importação */
+.rat-csv-resultado {
+  margin-bottom: var(--space-3);
+  padding: var(--space-3);
+  border-radius: var(--radius-sm);
+  font-size: var(--text-xs);
+  line-height: 1.5;
+}
+.rat-csv-resultado ul {
+  margin: var(--space-2) 0 0;
+  padding-left: var(--space-4);
+}
+.rat-csv-resultado.sucesso { background: var(--status-ok-bg); color: var(--status-ok-fg); }
+.rat-csv-resultado.alerta { background: var(--status-alerta-bg); color: var(--status-alerta-fg); }
+.rat-csv-resultado.erro { background: var(--status-divergencia-bg); color: var(--status-divergencia-fg); }
