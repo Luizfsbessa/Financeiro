@@ -375,3 +375,31 @@
 .rat-csv-resultado.sucesso { background: var(--status-ok-bg); color: var(--status-ok-fg); }
 .rat-csv-resultado.alerta { background: var(--status-alerta-bg); color: var(--status-alerta-fg); }
 .rat-csv-resultado.erro { background: var(--status-divergencia-bg); color: var(--status-divergencia-fg); }
+
+/* Seletor de ano dentro do relatório Realizado x Aprovado */
+.relatorio-filtro {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  margin-bottom: var(--space-3);
+}
+.relatorio-filtro label {
+  font-size: var(--text-xs);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--ink-700);
+}
+.relatorio-filtro select {
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--line-100);
+  border-radius: var(--radius-sm);
+  background: var(--paper-1);
+  font-size: var(--text-sm);
+}
+.relatorio-filtro-nota {
+  color: var(--ink-400);
+  font-size: var(--text-xs);
+}
