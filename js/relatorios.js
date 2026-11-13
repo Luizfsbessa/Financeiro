@@ -52,7 +52,7 @@ async function comFeedback(botao, acao) {
   }
 }
 
-async function carregarRelatorio(tipo, botaoClicado) {
+async function carregarRelatorio(tipo, botaoClicado, opcoes = {}) {
   document.querySelectorAll(".botao-relatorio").forEach((b) => b.classList.remove("ativo"));
   botaoClicado.classList.add("ativo");
 
@@ -67,9 +67,13 @@ async function carregarRelatorio(tipo, botaoClicado) {
     else if (tipo === "ordens-pagamento") relatorioAtual = await montarRelatorioOrdensPagamento();
     else if (tipo === "painel-proprio") relatorioAtual = await montarRelatorioPainel("proprio");
     else if (tipo === "painel-terceiros") relatorioAtual = await montarRelatorioPainel("terceiros");
+    else if (tipo === "realizado-aprovado") relatorioAtual = await montarRelatorioRealizadoAprovado(opcoes.ano);
 
     renderizarTabela(container, relatorioAtual);
     if (relatorioAtual.linhas.length > 0) acoes.style.display = "flex";
+
+    const seletorAno = document.getElementById("relatorio-ano");
+    seletorAno?.addEventListener("change", () => carregarRelatorio(tipo, botaoClicado, { ano: seletorAno.value }));
   } catch (erro) {
     console.error("[relatorios] erro ao carregar:", erro);
     container.innerHTML = `<div class="placeholder-modulo">Não foi possível carregar. Erro: ${erro.message || "veja o console (F12)"}.</div>`;
@@ -113,7 +117,7 @@ async function montarRelatorioDivergencias() {
     .sort((a, b) => b._ordenar - a._ordenar);
 
   const colunas = ["Centro de Custo", "Conta Contábil", "Serviço/Prestador", "NF", "Valor NF", "Divergência R$", "Divergência %", "Data Emissão", "Movidesk", "Observação"];
-  return { titulo: `Divergências (${linhas.length} lançamentos)`, arquivo: "divergencias", colunas, linhas };
+  return { titulo: `Divergências de NF — cada NF contra o orçamento projetado do Serviço (${linhas.length} lançamentos)`, arquivo: "divergencias", colunas, linhas };
 }
 
 // --- Relatório: Ordens de Pagamento ---
@@ -189,11 +193,98 @@ async function montarRelatorioPainel(tipoGestao) {
   return { titulo: `Painel — ${rotulo}`, arquivo: `painel-${tipoGestao}`, colunas, linhas };
 }
 
+// --- Relatório: Realizado x Aprovado (estouros mês a mês) ---
+
+/**
+ * Lista cada Conta + mês em que o realizado passou do aprovado, do maior
+ * estouro para o menor. O aprovado não tem ano no banco (é por mês), então o
+ * relatório é sempre de UM ano — por padrão o mais recente — pra não comparar
+ * lançamentos de 2025 contra o orçamento de 2026.
+ * Contas sem nenhum orçamento no ano ficam no fim, marcadas como tal: é falta
+ * de cadastro, não estouro, e misturar as duas coisas esconderia o problema real.
+ */
+async function montarRelatorioRealizadoAprovado(anoEscolhido) {
+  const [lancamentos, centros, contas] = await Promise.all([listarTodosLancamentos(), listarCentrosCusto(), listarTodasContas()]);
+  const centrosPorId = new Map(centros.map((c) => [c.id, c]));
+
+  const anos = [...new Set(lancamentos.map((l) => aDate(l.data_emissao)?.getFullYear()).filter(Boolean))].sort((a, b) => b - a);
+  const ano = anoEscolhido ? Number(anoEscolhido) : anos[0] ?? new Date().getFullYear();
+
+  const realizadoPorConta = new Map();
+  lancamentos.forEach((l) => {
+    const data = aDate(l.data_emissao);
+    if (!data || data.getFullYear() !== ano) return;
+    const idx = (l.mes_referencia ?? 1) - 1;
+    if (idx < 0 || idx > 11) return;
+    if (!realizadoPorConta.has(l.conta_contabil_id)) realizadoPorConta.set(l.conta_contabil_id, Array(12).fill(0));
+    realizadoPorConta.get(l.conta_contabil_id)[idx] += l.valor_nf ?? 0;
+  });
+
+  const linhas = [];
+  contas.forEach((conta) => {
+    const realizadoPorMes = realizadoPorConta.get(conta.id);
+    if (!realizadoPorMes) return;
+
+    const aprovadoPorMes = CHAVES_MES.map((k) => conta.orcamento_aprovado?.[k] ?? 0);
+    const temOrcamento = aprovadoPorMes.some((v) => v > 0);
+    const centro = centrosPorId.get(conta.centro_custo_id);
+
+    realizadoPorMes.forEach((realizado, i) => {
+      if (realizado <= 0) return;
+      const aprovado = aprovadoPorMes[i];
+
+      let situacao;
+      if (!temOrcamento) situacao = "Conta sem orçamento";
+      else if (aprovado === 0) situacao = "Sem aprovado no mês";
+      else if (realizado > aprovado) situacao = "Acima do aprovado";
+      else return; // dentro do aprovado: não é divergência
+
+      linhas.push({
+        _grupo: temOrcamento ? 0 : 1,
+        _ordenar: temOrcamento ? realizado - aprovado : realizado,
+        "Centro de Custo": centro?.nome ?? "—",
+        "Gestão": (centro?.tipo_gestao ?? "proprio") === "terceiros" ? "Terceiros" : "Próprio",
+        "Conta Contábil": conta.nome,
+        "Mês": `${NOMES_MES_ABREV[i]}/${ano}`,
+        "Aprovado": aprovado > 0 ? formatadorRS.format(aprovado) : "—",
+        "Realizado": formatadorRS.format(realizado),
+        "Estouro R$": temOrcamento ? formatadorRS.format(realizado - aprovado) : "—",
+        "Index %": aprovado > 0 ? ((realizado / aprovado) * 100).toFixed(1) + "%" : "—",
+        "Situação": situacao,
+      });
+    });
+  });
+
+  linhas.sort((a, b) => a._grupo - b._grupo || b._ordenar - a._ordenar);
+
+  const acima = linhas.filter((l) => l._grupo === 0).length;
+  const semOrcamento = linhas.length - acima;
+  const colunas = ["Centro de Custo", "Gestão", "Conta Contábil", "Mês", "Aprovado", "Realizado", "Estouro R$", "Index %", "Situação"];
+  return {
+    titulo: `Realizado × Aprovado ${ano} — ${acima} mês(es) acima do aprovado · ${semOrcamento} em contas sem orçamento`,
+    arquivo: `realizado-aprovado-${ano}`,
+    colunas,
+    linhas,
+    anos,
+    ano,
+  };
+}
+
 // --- Renderização em tela (genérica pra qualquer relatório) ---
 
 function renderizarTabela(container, relatorio) {
+  const filtroHtml = relatorio.anos
+    ? `<div class="relatorio-filtro">
+         <label for="relatorio-ano">Ano</label>
+         <select id="relatorio-ano">
+           ${(relatorio.anos.length ? relatorio.anos : [relatorio.ano]).map((a) => `<option value="${a}" ${a === relatorio.ano ? "selected" : ""}>${a}</option>`).join("")}
+         </select>
+         <span class="relatorio-filtro-nota">Estouro = realizado maior que o aprovado do mês. Contas sem nenhum orçamento no ano ficam no fim.</span>
+       </div>`
+    : "";
+
   if (relatorio.linhas.length === 0) {
-    container.innerHTML = '<div class="placeholder-modulo">Nenhum dado encontrado para este relatório.</div>';
+    container.innerHTML = filtroHtml + '<div class="placeholder-modulo">Nenhum dado encontrado para este relatório.</div>';
     return;
   }
 
@@ -207,6 +298,10 @@ function renderizarTabela(container, relatorio) {
             if (c === "Movidesk" && typeof valor === "string" && valor.startsWith("http")) {
               return `<td><a href="${valor}" target="_blank" rel="noopener" class="link-movidesk">Abrir ↗</a></td>`;
             }
+            if (c === "Situação") {
+              const classe = valor === "Acima do aprovado" ? "chip-divergencia" : valor === "Sem aprovado no mês" ? "chip-alerta" : "heat-sem-orcamento";
+              return `<td><span class="chip ${classe}">${valor}</span></td>`;
+            }
             return `<td>${valor}</td>`;
           })
           .join("")}</tr>`
@@ -214,43 +309,12 @@ function renderizarTabela(container, relatorio) {
     .join("");
 
   container.innerHTML = `
-    <p style="color: var(--ink-400); font-size: var(--text-xs); margin-bottom: var(--space-2)">${relatorio.titulo}</p>
-    <div class="scroll-topo"><div class="scroll-topo-interno"></div></div>
+    ${filtroHtml}
+    <p class="relatorio-titulo">${relatorio.titulo}</p>
     <div class="tabela-scroll">
       <table class="tabela-matriz">
         <thead><tr>${cabecalho}</tr></thead>
         <tbody>${linhasHtml}</tbody>
       </table>
     </div>`;
-
-  ativarScrollDuplo(container);
-}
-
-/**
- * Mesma técnica usada no Painel — sincroniza uma barra de scroll fina e
- * fixa no topo com a rolagem real da tabela, pra não precisar descer até
- * o fim de uma tabela grande só pra conseguir arrastar ela pros lados.
- */
-function ativarScrollDuplo(container) {
-  const scrollTopo = container.querySelector(".scroll-topo");
-  const scrollTopoInterno = container.querySelector(".scroll-topo-interno");
-  const tabelaScroll = container.querySelector(".tabela-scroll");
-  const tabela = tabelaScroll?.querySelector("table");
-  if (!scrollTopo || !scrollTopoInterno || !tabelaScroll || !tabela) return;
-
-  scrollTopoInterno.style.width = tabela.scrollWidth + "px";
-
-  let sincronizando = false;
-  scrollTopo.addEventListener("scroll", () => {
-    if (sincronizando) return;
-    sincronizando = true;
-    tabelaScroll.scrollLeft = scrollTopo.scrollLeft;
-    sincronizando = false;
-  });
-  tabelaScroll.addEventListener("scroll", () => {
-    if (sincronizando) return;
-    sincronizando = true;
-    scrollTopo.scrollLeft = tabelaScroll.scrollLeft;
-    sincronizando = false;
-  });
 }
