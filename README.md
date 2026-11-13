@@ -252,6 +252,16 @@ Nos Painéis (próprios e de terceiros), cada mês das linhas de Centro e de Con
 - **Conta sem orçamento aprovado cadastrado:** fica cinza, não vermelha. Se a conta tem orçamento em outros meses e gasto num mês sem aprovado, aí sim fica vermelha.
 - **Expansão preservada:** o que você abriu (Centro, Conta, Serviço) continua aberto ao trocar de filtro ou de visão.
 
+### Relatório "Realizado × Aprovado" (aba Relatórios)
+
+Lista só os estouros, uma linha por Conta e mês em que o realizado passou do aprovado, do maior para o menor. Próprios e Terceiros vêm juntos, com a coluna "Gestão" para filtrar no Excel. Tem seletor de ano (padrão: o mais recente), porque o aprovado não tem ano no banco e misturar anos compararia 2025 com o orçamento de 2026. Exporta em Excel e PDF como os outros.
+
+- **Acima do aprovado:** realizado maior que o aprovado do mês (mês exatamente igual não conta).
+- **Sem aprovado no mês:** a conta tem orçamento em outros meses, mas houve gasto num mês sem aprovado.
+- **Conta sem orçamento:** a conta não tem nenhum aprovado no ano. Fica no fim da lista e sem número de estouro, porque é falta de cadastro e não estouro.
+
+O relatório "Divergências" é outra coisa: compara cada NF com o orçamento **projetado do Serviço** (não com o aprovado da Conta). O título dele agora diz isso.
+
 Ainda não mudou: o relatório "Painel — Próprios/Terceiros" da aba Relatórios (e a exportação dele) segue com o Index do ano inteiro, e o relatório de Divergências continua comparando cada NF com o orçamento projetado do Serviço, não com o aprovado da Conta.
 
 ## Importação de CSV no rateio
