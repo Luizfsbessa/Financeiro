@@ -19,6 +19,7 @@ import { iniciarOrdensPagamento } from "./ordens-pagamento.js";
 import { iniciarOrcamento } from "./orcamento.js";
 import { iniciarRelatorios } from "./relatorios.js";
 import { iniciarUsuarios } from "./usuarios.js";
+import { iniciarAuditoria } from "./auditoria.js";
 
 const telaLogin = document.getElementById("tela-login");
 const appShell = document.getElementById("app-shell");
@@ -63,6 +64,7 @@ const PERMISSOES_NAV = {
   orcamento: ["administrador"],
   relatorios: ["administrador", "financeiro", "leitura"],
   usuarios: ["administrador"],
+  auditoria: ["administrador"],
 };
 
 function aplicarPermissoesNav(papel) {
@@ -121,6 +123,10 @@ function irParaSecao(nomeSecao, user) {
 
   if (nomeSecao === "usuarios") {
     iniciarUsuarios();
+  }
+
+  if (nomeSecao === "auditoria") {
+    iniciarAuditoria();
   }
 }
 

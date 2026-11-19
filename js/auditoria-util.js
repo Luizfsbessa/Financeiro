@@ -124,3 +124,43 @@ export function resumirAlteracoes(alteracoes) {
 export function formatarReais(valor) {
   return formatadorRS.format(valor ?? 0);
 }
+
+const ROTULOS_DETALHE = {
+  nf_numero: "NF",
+  valor_nf: "Valor da NF",
+  valor_total: "Valor total",
+  servico_nome: "Serviço",
+  numero_op: "OP",
+  numero_solicitacao: "Nº da solicitação",
+  saldo_total: "Saldo total",
+  saldo_op_antes: "Saldo da OP antes",
+  saldo_op_depois: "Saldo da OP depois",
+  protocolo_movidesk: "Protocolo Movidesk",
+  data_emissao: "Emissão",
+  data_vencimento: "Vencimento",
+  status_divergencia: "Status",
+  tipo_lancamento: "Tipo",
+  tipo: "Tipo",
+  fatias: "Fatias",
+  centros_ids: "Centros (ids)",
+  duplicidade_confirmada: "NF duplicada confirmada pela pessoa",
+  orcamento_aprovado_ano: "Aprovado no ano",
+  orcamento_projetado_ano: "Projetado no ano",
+  conta_codigo: "Código da conta",
+  tipo_gestao: "Gestão",
+  papel: "Papel",
+  nome: "Nome",
+};
+
+export function rotuloDetalhe(chave) {
+  return ROTULOS_DETALHE[chave] ?? String(chave).replace(/_/g, " ");
+}
+
+/** Dinheiro em valor/saldo/aprovado/projetado; Sim/Não em booleanos; "—" em vazio. */
+export function formatarDetalhe(chave, valor) {
+  if (valor === null || valor === undefined || valor === "") return "—";
+  if (typeof valor === "boolean") return valor ? "Sim" : "Não";
+  if (typeof valor === "number" && /^(valor|saldo|orcamento)/.test(chave)) return formatadorRS.format(valor);
+  if (typeof valor === "number" && /_ano$/.test(chave)) return formatadorRS.format(valor);
+  return String(valor);
+}

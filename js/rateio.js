@@ -17,12 +17,14 @@ import {
   buscarContaPorCentroECodigo,
   listarOrdensPagamentoRateioPorCodigo,
   registrarLancamentoRateado,
+  listarLancamentosPorNf,
 } from "./firestore.js";
 import { processarLancamento } from "./conciliacao.js";
 import { dadosDoLancador } from "./auth.js";
 import { invalidarDashboard, invalidarPainelTerceiros } from "./dashboard.js";
 import { montarLinkMovidesk } from "./integracoes.js";
 import { lerCsv, decodificarCsv, encontrarCentro, encontrarServico, modeloCsv } from "./rateio-csv.js";
+import { montarConfirmacaoDuplicidade } from "./nf-util.js";
 
 const formatadorRS = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" });
 
@@ -460,6 +462,23 @@ async function salvarRateio() {
         ...calculado,
       };
     });
+
+    // Aviso de NF duplicada: cada fatia tem o seu Serviço, então confere todas.
+    // Só avisa — quem decide é a pessoa. Se a checagem falhar, não trava o rateio.
+    try {
+      const jaLancadas = (await Promise.all(linhasParaGravar.map((l) => listarLancamentosPorNf(nfNumero, l.servico_id)))).flat();
+      if (jaLancadas.length > 0) {
+        if (!window.confirm(montarConfirmacaoDuplicidade(nfNumero, jaLancadas, { rateio: true }))) {
+          status.textContent = "Rateio não salvo: a NF parece duplicada.";
+          return;
+        }
+        linhasParaGravar.forEach((l) => {
+          l.alerta_duplicidade_confirmado = true;
+        });
+      }
+    } catch (erro) {
+      console.warn("[rateio] não foi possível checar NF duplicada:", erro);
+    }
 
     await registrarLancamentoRateado(linhasParaGravar, selOP.value);
 

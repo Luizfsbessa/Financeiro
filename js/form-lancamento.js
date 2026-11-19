@@ -12,11 +12,13 @@ import {
   orcamentoProjetadoDoMes,
   listarOrdensPagamentoPorConta,
   registrarLancamentoComOP,
+  listarLancamentosPorNf,
 } from "./firestore.js";
 import { processarLancamento } from "./conciliacao.js";
 import { dadosDoLancador } from "./auth.js";
 import { invalidarDashboard, invalidarPainelTerceiros } from "./dashboard.js";
 import { montarLinkMovidesk } from "./integracoes.js";
+import { montarAvisoDuplicidade, montarConfirmacaoDuplicidade } from "./nf-util.js";
 
 const formatadorRS = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" });
 const formatadorData = new Intl.DateTimeFormat("pt-BR");
@@ -46,6 +48,29 @@ export async function iniciarFormLancamento(user) {
   const preview = document.getElementById("preview-conciliacao");
   const mensagemStatus = document.getElementById("form-lancamento-status");
 
+  // --- Aviso de NF duplicada (só avisa; quem decide é a pessoa) ---
+  const avisoNfDuplicada = document.getElementById("aviso-nf-duplicada");
+
+  async function verificarDuplicidadeAoVivo() {
+    avisoNfDuplicada.hidden = true;
+    const nf = inputNfNumero.value.trim();
+    const servicoId = selServico.value;
+    if (!nf || !servicoId) return;
+    try {
+      const existentes = await listarLancamentosPorNf(nf, servicoId);
+      // descarta resposta velha: a pessoa pode ter mexido nos campos enquanto a busca rodava
+      if (nf !== inputNfNumero.value.trim() || servicoId !== selServico.value) return;
+      if (existentes.length > 0) {
+        avisoNfDuplicada.textContent = montarAvisoDuplicidade(nf, existentes);
+        avisoNfDuplicada.hidden = false;
+      }
+    } catch (erro) {
+      console.warn("[lancamento] não foi possível checar NF duplicada:", erro); // nunca trava o lançamento
+    }
+  }
+  inputNfNumero.addEventListener("change", verificarDuplicidadeAoVivo);
+  selServico.addEventListener("change", verificarDuplicidadeAoVivo);
+
   inputProtocoloMovidesk.addEventListener("input", () => {
     const link = montarLinkMovidesk(inputProtocoloMovidesk.value);
     linkMovidesk.hidden = !link;
@@ -70,6 +95,7 @@ export async function iniciarFormLancamento(user) {
       limparSelect(selServico, "Selecione o Serviço/Prestador");
       limparSelect(selOP, "Selecione o Serviço/Prestador primeiro");
       linkMovidesk.hidden = true;
+      avisoNfDuplicada.hidden = true;
       atualizarPreview(null);
       mensagemStatus.textContent = "";
       selCentro.focus();
@@ -287,6 +313,22 @@ export async function iniciarFormLancamento(user) {
     botaoSalvar.disabled = true;
 
     try {
+      // Checa de novo na hora de salvar (o aviso da tela pode estar velho).
+      // Se a checagem falhar por qualquer motivo, não trava o lançamento.
+      let duplicidadeConfirmada = false;
+      try {
+        const existentes = await listarLancamentosPorNf(inputNfNumero.value.trim(), selServico.value);
+        if (existentes.length > 0) {
+          if (!window.confirm(montarConfirmacaoDuplicidade(inputNfNumero.value.trim(), existentes))) {
+            mensagemStatus.textContent = "Lançamento não salvo: a NF parece duplicada.";
+            return;
+          }
+          duplicidadeConfirmada = true;
+        }
+      } catch (erro) {
+        console.warn("[lancamento] não foi possível checar NF duplicada:", erro);
+      }
+
       await registrarLancamentoComOP(
         {
           ...dadosDoLancador(user),
@@ -300,6 +342,7 @@ export async function iniciarFormLancamento(user) {
           data_emissao: dataEmissao,
           data_vencimento: dataVencimento,
           protocolo_movidesk: inputProtocoloMovidesk.value.trim(),
+          ...(duplicidadeConfirmada ? { alerta_duplicidade_confirmado: true } : {}),
           ...calculado,
         },
         selOP.value
@@ -312,6 +355,7 @@ export async function iniciarFormLancamento(user) {
       limparSelect(selServico, "Selecione o Serviço/Prestador");
       limparSelect(selOP, "Selecione o Serviço/Prestador primeiro");
       linkMovidesk.hidden = true;
+      avisoNfDuplicada.hidden = true;
       atualizarPreview(null);
       invalidarDashboard();
       invalidarPainelTerceiros();
