@@ -86,6 +86,10 @@
           <span class="icone"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></span>
           <span class="texto">Usuários &amp; Permissões</span>
         </a></li>
+        <li><a href="#auditoria" data-secao="auditoria" title="Auditoria">
+          <span class="icone"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/><path d="M9 12h6M9 16h6"/></svg></span>
+          <span class="texto">Auditoria</span>
+        </a></li>
       </ul>
 
       <div class="sidebar-usuario">
@@ -168,6 +172,7 @@
             <div class="campo">
               <label for="campo-nf-numero">Número da Nota Fiscal</label>
               <input type="text" id="campo-nf-numero" required autocomplete="off" />
+                <p id="aviso-nf-duplicada" class="aviso-duplicidade" role="alert" hidden></p>
             </div>
 
             <div class="campo">
@@ -524,6 +529,17 @@
         </form>
 
         <div id="lista-usuarios">
+          <p class="preview-vazio">Carregando...</p>
+        </div>
+      </section>
+
+      <!-- ===== Aba: Auditoria (só Administrador) ===== -->
+      <section id="secao-auditoria" class="secao-conteudo" hidden>
+        <header><h2>Auditoria</h2></header>
+        <p style="color: var(--ink-400); font-size: var(--text-sm); margin-bottom: var(--space-4); margin-top: calc(-1 * var(--space-4))">
+          Quem fez o quê e quando: lançamentos, Ordens de Pagamento, alterações de orçamento e de cadastro, e acessos de usuários. Ninguém consegue editar ou apagar um registro.
+        </p>
+        <div id="auditoria-conteudo">
           <p class="preview-vazio">Carregando...</p>
         </div>
       </section>

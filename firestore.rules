@@ -9,6 +9,9 @@
 //                   NÃO mexe em Centro/Conta/Serviço nem em usuários
 //   leitura       — só lê, não escreve nada
 //
+// TRILHA DE AUDITORIA: a coleção logs_auditoria é gravada pelo app junto de
+// cada alteração e só o Administrador lê. Não pode ser editada nem apagada.
+//
 // COMO APLICAR (leia isso inteiro antes de publicar):
 //
 // 1) PRIMEIRO, cadastre manualmente o SEU PRÓPRIO e-mail como
@@ -96,9 +99,23 @@ service cloud.firestore {
       allow write: if ehFinanceiroOuAdmin();
     }
 
-    // --- Qualquer coleção futura não listada acima: só Administrador ---
-    match /{document=**} {
-      allow read, write: if ehAdmin();
+    // --- Trilha de auditoria ---
+    // Só Administrador lê. Qualquer usuário autorizado pode CRIAR um registro
+    // (o app grava o log junto de cada alteração), mas só com o PRÓPRIO e-mail
+    // e com a hora do servidor — não dá pra assinar como outra pessoa nem
+    // inventar a data. Ninguém, nem Administrador, edita ou apaga um registro.
+    match /logs_auditoria/{id} {
+      allow read: if ehAdmin();
+      allow create: if autorizado()
+        && request.resource.data.usuario_email == emailAtual()
+        && request.resource.data.data_hora == request.time
+        && request.resource.data.keys().hasAll(['usuario_email', 'data_hora', 'acao', 'resumo']);
+      allow update, delete: if false;
     }
+
+    // Qualquer coleção que não esteja listada acima fica NEGADA pra todo mundo.
+    // (Antes havia um curinga "só Administrador" aqui. As regras do Firestore
+    // SOMAM as permissões de todos os blocos que casam com o caminho, então
+    // esse curinga daria ao Administrador o direito de apagar os logs.)
   }
 }

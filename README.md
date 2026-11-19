@@ -279,6 +279,32 @@ Na aba "Rateio entre Centros de Custo", o botão **Importar CSV** preenche as fa
 
 A leitura e as regras do CSV estão em `js/rateio-csv.js` (funções puras, sem tela nem banco).
 
+## Trilha de auditoria
+
+Cada alteração importante grava um registro em `logs_auditoria` **dentro da mesma transação** da alteração: não existe mudança sem registro, e uma operação que falha (ex.: saldo insuficiente na OP) não deixa registro nenhum. O registro guarda e-mail e nome de quem fez, a hora do servidor, a ação, um resumo legível e o antes → depois.
+
+- **O que é registrado:** lançamento criado (com saldo da OP antes e depois), rateio lançado (um registro por rateio), OP criada, Centro/Conta/Serviço criados e alterados (mês a mês no orçamento), e usuário autorizado, alterado, desativado ou reativado. Salvar sem mudar nada não gera registro.
+- **Tela "Auditoria"** (menu, só Administrador): últimos 500 registros, filtros por tipo, usuário e texto, e cada linha abre o que mudou.
+- **Trava (nas Regras do Firestore):** só Administrador lê; qualquer usuário autorizado cria, mas só com o próprio e-mail e a hora do servidor; **ninguém edita nem apaga**, nem Administrador. Para isso o curinga "qualquer outra coleção só Administrador" foi removido das regras: as regras do Firestore somam as permissões, e ele deixaria o Administrador apagar logs. Coleção não listada agora é negada a todos.
+- **Limite honesto:** o registro é gravado pelo próprio app. Quem escrever direto no banco, fora do app, não passa por ele (garantir isso exigiria Cloud Functions, que pedem o plano Blaze). Para uma equipe pequena com papéis definidos, o ganho é "quem fez e quando" confiável contra erro e contra esquecimento, não proteção contra um administrador mal-intencionado com acesso ao console.
+- **Não passam pela auditoria:** as cargas de `seed.html` (importar base, popular exemplos).
+
+### ⚠️ Ordem para publicar (importante)
+
+1. **Primeiro** cole o novo `firestore.rules` no Console do Firebase (Firestore → Regras → Publicar).
+2. **Depois** suba os arquivos do app.
+
+Se subir o app antes e as regras restritivas antigas estiverem publicadas, o Financeiro deixa de conseguir lançar (o registro de auditoria dele seria negado, e como faz parte da mesma transação, o lançamento falha junto). Se algo travar, `firestore.rules.PERMISSIVO-BACKUP` reabre tudo.
+
+## Alerta de NF duplicada
+
+Ao informar o Número da NF e o Serviço, o sistema procura lançamentos já feitos com essa mesma NF **no mesmo Serviço** e mostra um aviso na hora, dizendo quando foi lançada, o valor, por quem e o protocolo. Ao salvar, confere de novo e pede confirmação. **É só aviso — nunca bloqueia**: a mesma NF pode aparecer legitimamente em contas diferentes, e quem decide é a pessoa. Se a pessoa confirma, isso fica marcado no lançamento e no registro de auditoria.
+
+- A comparação ignora zeros à esquerda, pontos, hífens e maiúsculas: `0123`, `123` e `526.811.187`/`526811187` contam como a mesma nota.
+- No Rateio, confere cada fatia (cada uma tem o seu Serviço) na hora de salvar.
+- Se a consulta falhar por qualquer motivo (índice, rede), o lançamento segue normalmente.
+- Ainda não existe a versão por hash de arquivo: ela só faz sentido junto com o upload da NF, que depende do Storage (plano Blaze).
+
 ## Próximos módulos (ainda não construídos)
 
 - Upload de foto da NF (Storage) — adiado, veja a seção sobre o plano Blaze acima.
