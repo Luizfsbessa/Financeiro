@@ -403,3 +403,16 @@
   color: var(--ink-400);
   font-size: var(--text-xs);
 }
+
+/* Aviso de NF possivelmente duplicada (só avisa, não bloqueia) */
+.aviso-duplicidade {
+  margin: var(--space-2) 0 0;
+  padding: var(--space-2) var(--space-3);
+  background: var(--status-alerta-bg);
+  color: var(--status-alerta-fg);
+  border-radius: var(--radius-sm);
+  font-size: var(--text-xs);
+  line-height: 1.5;
+  white-space: pre-line;
+}
+.aviso-duplicidade[hidden] { display: none; }

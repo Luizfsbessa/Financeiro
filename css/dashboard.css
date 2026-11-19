@@ -278,3 +278,46 @@
   color: var(--ink-400);
   font-size: var(--text-xs);
 }
+
+/* --- Tela de Auditoria (tabela de texto, não de números) --- */
+.painel-filtros input[type="search"] {
+  width: 100%;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--line-100);
+  border-radius: var(--radius-sm);
+  background: var(--paper-1);
+  font-size: var(--text-sm);
+}
+.tabela-texto th,
+.tabela-texto td {
+  text-align: left;
+}
+.tabela-texto td.aud-resumo {
+  white-space: normal;
+  min-width: 320px;
+}
+.aud-linha {
+  cursor: pointer;
+}
+.aud-linha.expandido .icone-toggle {
+  transform: rotate(90deg);
+}
+.aud-detalhe td {
+  background: var(--paper-0);
+  white-space: normal;
+  font-size: var(--text-xs);
+  padding: var(--space-3) var(--space-4);
+}
+.aud-lista {
+  margin: 0;
+  padding-left: var(--space-4);
+}
+.aud-detalhes {
+  margin: 0;
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: var(--space-1) var(--space-4);
+}
+.aud-detalhes dt { color: var(--ink-400); }
+.aud-detalhes dd { margin: 0; color: var(--ink-900); }
+.aud-vazio { color: var(--ink-400); font-style: italic; }
